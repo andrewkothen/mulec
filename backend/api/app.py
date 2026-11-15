@@ -39,9 +39,14 @@ def reference_url(value):
         return value
     parsed = urlparse(value)
     host = (parsed.hostname or "").lower()
-    if parsed.scheme != "https" or parsed.username or parsed.password or not (
-        host in {"youtube.com", "www.youtube.com", "youtu.be", "music.youtube.com", "bandcamp.com"}
-        or host.endswith(".bandcamp.com")
+    if (
+        parsed.scheme != "https"
+        or parsed.username
+        or parsed.password
+        or not (
+            host in {"youtube.com", "www.youtube.com", "youtu.be", "music.youtube.com", "bandcamp.com"}
+            or host.endswith(".bandcamp.com")
+        )
     ):
         raise ValueError("Reference links must be HTTPS YouTube or Bandcamp URLs")
     return value
@@ -64,8 +69,15 @@ def create_app(data_dir: Path | None = None):
     @app.middleware("http")
     async def local_only(request: Request, call_next):
         origin = request.headers.get("origin")
-        if origin and origin not in {"http://127.0.0.1:8765", "http://localhost:8765", "http://localhost:3000", "http://127.0.0.1:3000"}:
-            return JSONResponse({"detail": "Only the local Mulec application may access this API"}, status_code=403)
+        if origin and origin not in {
+            "http://127.0.0.1:8765",
+            "http://localhost:8765",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        }:
+            return JSONResponse(
+                {"detail": "Only the local Mulec application may access this API"}, status_code=403
+            )
         return await call_next(request)
 
     @app.exception_handler(KeyError)
@@ -113,21 +125,36 @@ def create_app(data_dir: Path | None = None):
         project = Project.model_validate_json(b"".join(chunks))
         validate_music(project)
         project.id, project.revision = uid(), 0
-        project.warnings.append("Imported JSON contains notation only. Original audio is not included in project exports.")
+        project.warnings.append(
+            "Imported JSON contains notation only. Original audio is not included in project exports."
+        )
         project.warnings = project.warnings[-30:]
         return store.save(project, new=True)
 
     def run_job(job_id, project, path, options):
         def progress(percent, message):
             store.job(job_id, {"id": job_id, "status": "running", "progress": percent, "message": message})
+
         try:
             result = analyze(project, path, store.audio / f"{project.id}.wav", options, progress)
             store.save(result, new=True)
-            store.job(job_id, {"id": job_id, "status": "done", "progress": 100, "project_id": project.id,
-                               "message": "Chart ready for review"})
+            store.job(
+                job_id,
+                {
+                    "id": job_id,
+                    "status": "done",
+                    "progress": 100,
+                    "project_id": project.id,
+                    "message": "Chart ready for review",
+                },
+            )
         except Exception as exc:
             logger.exception("Local analysis failed")
-            message = str(exc) if isinstance(exc, ValueError) else "Analysis failed. Try a shorter WAV file; details are in the local server log."
+            message = (
+                str(exc)
+                if isinstance(exc, ValueError)
+                else "Analysis failed. Try a shorter WAV file; details are in the local server log."
+            )
             store.job(job_id, {"id": job_id, "status": "error", "progress": 0, "message": message})
             (store.audio / f"{project.id}.wav").unlink(missing_ok=True)
         finally:
@@ -135,14 +162,22 @@ def create_app(data_dir: Path | None = None):
             slots.release()
 
     @app.post("/api/analyze", status_code=202)
-    async def upload(file: UploadFile = File(...), options: str = Form("{}"),
-                     title: str = Form(""), composer: str = Form(""), reference: str = Form("")):
+    async def upload(
+        file: UploadFile = File(...),
+        options: str = Form("{}"),
+        title: str = Form(""),
+        composer: str = Form(""),
+        reference: str = Form(""),
+    ):
         try:
             settings = AnalysisOptions.model_validate_json(options)
             reference_url(reference)
             name = Path(file.filename or "audio").name
-            project = Project(title=title or Path(name).stem, composer=composer,
-                              source=Source(filename=name, reference_url=reference))
+            project = Project(
+                title=title or Path(name).stem,
+                composer=composer,
+                source=Source(filename=name, reference_url=reference),
+            )
         except (ValueError, ValidationError) as exc:
             raise HTTPException(422, str(exc)) from exc
         if Path(name).suffix.lower() not in {".wav", ".mp3", ".flac", ".m4a", ".ogg", ".aiff", ".aif"}:
@@ -159,7 +194,10 @@ def create_app(data_dir: Path | None = None):
                         raise HTTPException(413, "Audio uploads are limited to 150 MB")
                     dest.write(chunk)
             job_id = uid()
-            job = store.job(job_id, {"id": job_id, "status": "queued", "progress": 0, "message": "Waiting for local analysis"})
+            job = store.job(
+                job_id,
+                {"id": job_id, "status": "queued", "progress": 0, "message": "Waiting for local analysis"},
+            )
             executor.submit(run_job, job_id, project, path, settings)
             return job
         except BaseException:
@@ -173,14 +211,20 @@ def create_app(data_dir: Path | None = None):
     def demo():
         if not slots.acquire(blocking=False):
             raise HTTPException(429, "Wait for the current analyses to finish")
-        project = Project(title="Sunday Sketch", composer="Mulec original test fixture · CC0",
-                          source=Source(filename="sunday-sketch.wav"))
+        project = Project(
+            title="Sunday Sketch",
+            composer="Mulec original test fixture · CC0",
+            source=Source(filename="sunday-sketch.wav"),
+        )
         path = store.audio / f"{project.id}.upload"
         try:
             make_demo(path.with_suffix(".wav"))
             path.with_suffix(".wav").rename(path)
             job_id = uid()
-            job = store.job(job_id, {"id": job_id, "status": "queued", "progress": 0, "message": "Analyzing original demo audio"})
+            job = store.job(
+                job_id,
+                {"id": job_id, "status": "queued", "progress": 0, "message": "Analyzing original demo audio"},
+            )
             executor.submit(run_job, job_id, project, path, AnalysisOptions())
             return job
         except BaseException:
@@ -216,14 +260,25 @@ def create_app(data_dir: Path | None = None):
         if format == "musicxml":
             content, mime = export.musicxml(project), "application/vnd.recordare.musicxml+xml"
         elif format == "pdf":
-            content, mime = export.pdf(project, paper, {"concert": "Concert pitch", "bb": "Bb instrument", "eb": "Eb instrument"}[part]), "application/pdf"
+            content, mime = (
+                export.pdf(
+                    project,
+                    paper,
+                    {"concert": "Concert pitch", "bb": "Bb instrument", "eb": "Eb instrument"}[part],
+                ),
+                "application/pdf",
+            )
         elif format == "midi":
             content, mime = export.midi_bytes(project), "audio/midi"
         elif format == "json":
             content, mime = json.dumps(project.model_dump(), indent=2).encode(), "application/json"
         else:
             raise HTTPException(404, "Unknown export format")
-        return Response(content, media_type=mime, headers={"Content-Disposition": f'attachment; filename="mulec-chart.{format}"'})
+        return Response(
+            content,
+            media_type=mime,
+            headers={"Content-Disposition": f'attachment; filename="mulec-chart.{format}"'},
+        )
 
     frontend = ROOT / "frontend" / "out"
     if frontend.exists():

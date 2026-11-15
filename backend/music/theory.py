@@ -1,4 +1,5 @@
 """Chord parsing and transposition independent of inference."""
+
 import re
 
 from music21 import harmony, pitch
@@ -41,7 +42,7 @@ def transpose_chord(symbol: str, semitones: int) -> str:
     transposed = names[(pitch_class(root + accidental) + semitones) % 12]
     bass = re.search(r"/([A-G][b#]?)$", suffix)
     if bass:
-        suffix = suffix[:bass.start()] + "/" + names[(pitch_class(bass[1]) + semitones) % 12]
+        suffix = suffix[: bass.start()] + "/" + names[(pitch_class(bass[1]) + semitones) % 12]
     return transposed + suffix
 
 

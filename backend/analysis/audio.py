@@ -1,4 +1,5 @@
 """Decode bounded local files; no URL fetching or external services."""
+
 from dataclasses import dataclass
 from pathlib import Path
 import subprocess
@@ -27,10 +28,28 @@ def decode(path: Path, playback_path: Path) -> AudioData:
         decoded = Path(temp) / "decoded.wav"
         try:
             process = subprocess.run(
-                [imageio_ffmpeg.get_ffmpeg_exe(), "-nostdin", "-v", "error", "-y",
-                 "-protocol_whitelist", "file,pipe", "-i", str(path), "-t", str(MAX_SECONDS + 1),
-                 "-vn", "-ac", "1", "-ar", str(RATE), str(decoded)],
-                capture_output=True, timeout=120, check=False,
+                [
+                    imageio_ffmpeg.get_ffmpeg_exe(),
+                    "-nostdin",
+                    "-v",
+                    "error",
+                    "-y",
+                    "-protocol_whitelist",
+                    "file,pipe",
+                    "-i",
+                    str(path),
+                    "-t",
+                    str(MAX_SECONDS + 1),
+                    "-vn",
+                    "-ac",
+                    "1",
+                    "-ar",
+                    str(RATE),
+                    str(decoded),
+                ],
+                capture_output=True,
+                timeout=120,
+                check=False,
             )
             if process.returncode:
                 raise ValueError("This file could not be decoded. Try a WAV, FLAC, MP3 or M4A audio file.")

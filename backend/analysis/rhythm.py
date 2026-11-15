@@ -1,4 +1,5 @@
 """Beat evidence with explicit meter/downbeat assumptions."""
+
 from dataclasses import dataclass
 
 import librosa
@@ -20,12 +21,16 @@ def analyze_rhythm(y, sr: int, start: float, quarters: float, bpm_override: floa
     tempo, frames = librosa.beat.beat_track(onset_envelope=envelope, sr=sr, hop_length=512, trim=False)
     estimated = float(np.asarray(tempo).reshape(-1)[0])
     detected = librosa.frames_to_time(frames, sr=sr, hop_length=512)
-    warnings = ["Meter is a user-selected assumption; the first detected beat is treated as the downbeat. Review the grid."]
+    warnings = [
+        "Meter is a user-selected assumption; the first detected beat is treated as the downbeat. Review the grid."
+    ]
     if estimated <= 0 or len(detected) < 3:
         bpm = bpm_override or 120.0
         confidence = 0.0
         offset = 0.0
-        warnings.append("No reliable pulse detected. A provisional 120 BPM grid is used unless you supplied a tempo.")
+        warnings.append(
+            "No reliable pulse detected. A provisional 120 BPM grid is used unless you supplied a tempo."
+        )
     else:
         bpm = bpm_override or estimated
         intervals = np.diff(detected)
@@ -48,5 +53,10 @@ def analyze_rhythm(y, sr: int, start: float, quarters: float, bpm_override: floa
     if duration - boundaries[-1] < 0.15 and len(boundaries) > 1:
         boundaries.pop()
     boundaries.append(duration)
-    return Rhythm(round(bpm, 2), round(confidence, 3),
-                  [float(b + start) for b in beats], [float(b + start) for b in boundaries], warnings)
+    return Rhythm(
+        round(bpm, 2),
+        round(confidence, 3),
+        [float(b + start) for b in beats],
+        [float(b + start) for b in boundaries],
+        warnings,
+    )

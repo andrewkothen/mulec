@@ -1,4 +1,5 @@
 """Portable notation and print-ready chord charts."""
+
 from io import BytesIO
 import textwrap
 
@@ -38,12 +39,12 @@ def score(project: Project):
         position = 0.0
         for event in sorted(measure.notes, key=lambda n: n.beat):
             if event.beat > position:
-                m.insert(position, note.Rest(quarterLength=event.beat-position))
+                m.insert(position, note.Rest(quarterLength=event.beat - position))
             n = note.Note(event.midi, quarterLength=event.duration)
             m.insert(event.beat, n)
             position = event.beat + event.duration
         if position < measure.meter.quarters:
-            m.insert(position, note.Rest(quarterLength=measure.meter.quarters-position))
+            m.insert(position, note.Rest(quarterLength=measure.meter.quarters - position))
         if measure.repeat_start:
             m.leftBarline = bar.Repeat(direction="start")
         if measure.repeat_end:
@@ -85,29 +86,33 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch") -> bytes:
         nonlocal page
         page += 1
         c.setFillColor(ink)
-        c.setFont("Helvetica-Bold", fit(project.title, "Helvetica-Bold", 24, width-2*margin))
-        c.drawString(margin, height-56, project.title)
-        c.setFont("Helvetica", fit(project.composer, "Helvetica", 10, width-2*margin))
-        c.drawString(margin, height-74, project.composer)
+        c.setFont("Helvetica-Bold", fit(project.title, "Helvetica-Bold", 24, width - 2 * margin))
+        c.drawString(margin, height - 56, project.title)
+        c.setFont("Helvetica", fit(project.composer, "Helvetica", 10, width - 2 * margin))
+        c.drawString(margin, height - 74, project.composer)
         c.setFont("Helvetica", 10)
-        c.drawString(margin, height-98, f"{project.key} {project.key_mode}  |  {project.meter.numerator}/{project.meter.denominator}  |  quarter = {project.bpm:g}  |  {project.feel}")
+        c.drawString(
+            margin,
+            height - 98,
+            f"{project.key} {project.key_mode}  |  {project.meter.numerator}/{project.meter.denominator}  |  quarter = {project.bpm:g}  |  {project.feel}",
+        )
         c.setFillColor(muted)
         c.setFont("Helvetica", 9)
-        c.drawRightString(width-margin, height-114, part_label + " / Chord chart")
+        c.drawRightString(width - margin, height - 114, part_label + " / Chord chart")
         c.setStrokeColor(ink)
-        c.line(margin, height-124, width-margin, height-124)
+        c.line(margin, height - 124, width - margin, height - 124)
         c.setFont("Helvetica", 8)
         c.drawString(margin, 25, "MULEC  /  Rehearsal chart")
-        c.drawRightString(width-margin, 25, str(page))
-        return height-145
+        c.drawRightString(width - margin, 25, str(page))
+        return height - 145
 
     y = header()
     # A row stops at a section boundary. Dense measures get fewer columns.
     index = 0
     while index < len(project.measures):
         row = []
-        capacity = 2 if any(len(m.chords) > 4 for m in project.measures[index:index+4]) else 4
-        for m in project.measures[index:index+capacity]:
+        capacity = 2 if any(len(m.chords) > 4 for m in project.measures[index : index + 4]) else 4
+        for m in project.measures[index : index + capacity]:
             if row and m.section:
                 break
             row.append(m)
@@ -123,31 +128,33 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch") -> bytes:
             c.setFont("Helvetica-Bold", 11)
             c.drawString(margin, y, row[0].section)
             y -= 20
-        cell_width = (width-2*margin) / capacity
+        cell_width = (width - 2 * margin) / capacity
         for offset, m in enumerate(row):
             x = margin + offset * cell_width
             c.setStrokeColor(HexColor("#a7b2b5"))
-            c.line(x, y-8, x, y-row_height+8)
-            c.line(x, y-row_height+8, x+cell_width, y-row_height+8)
+            c.line(x, y - 8, x, y - row_height + 8)
+            c.line(x, y - row_height + 8, x + cell_width, y - row_height + 8)
             c.setFillColor(muted)
             c.setFont("Helvetica", 8)
-            c.drawString(x+8, y-8, str(index+offset+1))
+            c.drawString(x + 8, y - 8, str(index + offset + 1))
             suffix = (" |:" if m.repeat_start else "") + (" :|" if m.repeat_end else "")
             if m.meter != project.meter:
                 suffix = f"{m.meter.numerator}/{m.meter.denominator}" + suffix
-            c.drawRightString(x+cell_width-8, y-8, suffix)
+            c.drawRightString(x + cell_width - 8, y - 8, suffix)
             for j, event in enumerate(sorted(m.chords, key=lambda v: v.beat)):
                 label = event.symbol
                 c.setFillColor(ink)
-                c.setFont("Helvetica-Bold", fit(label, "Helvetica-Bold", min(14, line_height-2), cell_width-40))
-                c.drawString(x+8, y-28-j*line_height, label)
+                c.setFont(
+                    "Helvetica-Bold", fit(label, "Helvetica-Bold", min(14, line_height - 2), cell_width - 40)
+                )
+                c.drawString(x + 8, y - 28 - j * line_height, label)
                 c.setFillColor(muted)
                 c.setFont("Helvetica", 7)
-                c.drawRightString(x+cell_width-8, y-28-j*line_height, f"{event.beat+1:g}")
+                c.drawRightString(x + cell_width - 8, y - 28 - j * line_height, f"{event.beat + 1:g}")
             c.setFont("Helvetica-Oblique", 8)
             for j, line in enumerate(textwrap.wrap(m.cue, 25)):
-                c.drawString(x+8, y-34-len(m.chords)*line_height-j*11, line)
-        c.line(margin+len(row)*cell_width, y-8, margin+len(row)*cell_width, y-row_height+8)
+                c.drawString(x + 8, y - 34 - len(m.chords) * line_height - j * 11, line)
+        c.line(margin + len(row) * cell_width, y - 8, margin + len(row) * cell_width, y - row_height + 8)
         y -= row_height + 16
         index += len(row)
     c.save()

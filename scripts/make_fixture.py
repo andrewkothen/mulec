@@ -1,4 +1,5 @@
 """Generate an original CC0 fixture without committing audio binaries."""
+
 import sys
 from pathlib import Path
 

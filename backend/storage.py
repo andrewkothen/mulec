@@ -1,4 +1,5 @@
 """SQLite project snapshots and jobs; audio is stored outside the database."""
+
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
@@ -19,12 +20,17 @@ class Store:
         self.audio = root / "audio"
         self.audio.mkdir(exist_ok=True)
         with self.connection() as db:
-            db.execute("CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, body TEXT NOT NULL, updated TEXT NOT NULL)")
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, body TEXT NOT NULL, updated TEXT NOT NULL)"
+            )
             db.execute("CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, body TEXT NOT NULL)")
             for row in db.execute("SELECT id, body FROM jobs").fetchall():
                 job = json.loads(row[1])
                 if job["status"] in ("queued", "running"):
-                    job.update(status="error", message="Analysis was interrupted by a server restart. Import the audio again.")
+                    job.update(
+                        status="error",
+                        message="Analysis was interrupted by a server restart. Import the audio again.",
+                    )
                     db.execute("UPDATE jobs SET body=? WHERE id=?", (json.dumps(job), row[0]))
 
     @contextmanager
@@ -38,9 +44,14 @@ class Store:
 
     def list(self):
         with self.connection() as db:
-            projects = [json.loads(row[0]) for row in db.execute("SELECT body FROM projects ORDER BY updated DESC")]
-        return [{k: p[k] for k in ("id", "title", "composer", "bpm", "key", "updated_at", "revision")}
-                | {"measures": len(p["measures"]), "duration": p["source"]["duration"]} for p in projects]
+            projects = [
+                json.loads(row[0]) for row in db.execute("SELECT body FROM projects ORDER BY updated DESC")
+            ]
+        return [
+            {k: p[k] for k in ("id", "title", "composer", "bpm", "key", "updated_at", "revision")}
+            | {"measures": len(p["measures"]), "duration": p["source"]["duration"]}
+            for p in projects
+        ]
 
     def get(self, project_id):
         with self.connection() as db:
@@ -56,12 +67,16 @@ class Store:
             if row and new:
                 raise ConflictError("This project already exists")
             if row and json.loads(row[0])["revision"] != project.revision:
-                raise ConflictError("A newer version was saved in another tab. Reload the project before saving.")
+                raise ConflictError(
+                    "A newer version was saved in another tab. Reload the project before saving."
+                )
             copy = project.model_copy(deep=True)
             copy.revision += 1
             copy.updated_at = datetime.now(timezone.utc).isoformat()
-            db.execute("INSERT OR REPLACE INTO projects VALUES (?, ?, ?)",
-                       (copy.id, copy.model_dump_json(), copy.updated_at))
+            db.execute(
+                "INSERT OR REPLACE INTO projects VALUES (?, ?, ?)",
+                (copy.id, copy.model_dump_json(), copy.updated_at),
+            )
         return copy
 
     def job(self, job_id, body=None):

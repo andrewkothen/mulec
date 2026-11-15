@@ -1,4 +1,5 @@
 """Original synthetic fixture, generated locally. CC0; no sampled recordings."""
+
 from pathlib import Path
 
 import numpy as np
@@ -16,9 +17,9 @@ def make_demo(path: Path, bars: int = 8) -> Path:
             start = int((bar * 2 + beat * 0.5) * sr)
             t = np.arange(int(0.48 * sr)) / sr
             envelope = np.minimum(t / 0.008, 1) * np.exp(-t * 2.5)
-            tone = sum(np.sin(2*np.pi*440*2**((midi-69)/12)*t) for midi in progression[bar % 4])
-            y[start:start+len(t)] += tone * envelope * 0.13
+            tone = sum(np.sin(2 * np.pi * 440 * 2 ** ((midi - 69) / 12) * t) for midi in progression[bar % 4])
+            y[start : start + len(t)] += tone * envelope * 0.13
             click = rng.normal(size=int(sr * 0.02)) * np.exp(-np.arange(int(sr * 0.02)) / 70) * 0.15
-            y[start:start+len(click)] += click
+            y[start : start + len(click)] += click
     sf.write(path, y, sr)
     return path

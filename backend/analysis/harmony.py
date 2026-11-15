@@ -3,6 +3,7 @@
 Template vocabulary deliberately favors triads and sevenths. Extensions and
 alterations remain editable but are not guessed from mixed audio.
 """
+
 from dataclasses import dataclass
 
 import librosa
@@ -11,10 +12,20 @@ import numpy as np
 from backend.models import Chord
 from backend.music.theory import FLATS, quantize
 
-QUALITIES = {"": [0, 4, 7], "m": [0, 3, 7], "7": [0, 4, 7, 10],
-             "maj7": [0, 4, 7, 11], "m7": [0, 3, 7, 10], "m7b5": [0, 3, 6, 10],
-             "dim": [0, 3, 6], "dim7": [0, 3, 6, 9], "aug": [0, 4, 8],
-             "sus2": [0, 2, 7], "sus4": [0, 5, 7], "add9": [0, 2, 4, 7]}
+QUALITIES = {
+    "": [0, 4, 7],
+    "m": [0, 3, 7],
+    "7": [0, 4, 7, 10],
+    "maj7": [0, 4, 7, 11],
+    "m7": [0, 3, 7, 10],
+    "m7b5": [0, 3, 6, 10],
+    "dim": [0, 3, 6],
+    "dim7": [0, 3, 6, 9],
+    "aug": [0, 4, 8],
+    "sus2": [0, 2, 7],
+    "sus4": [0, 5, 7],
+    "add9": [0, 2, 4, 7],
+}
 MAJOR = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88])
 MINOR = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
 
@@ -67,7 +78,7 @@ def estimate_chords(features: HarmonicFeatures, start: float, end: float, quarte
         vector = np.maximum(vector - np.max(vector) * 0.15, 0)
         vector /= max(np.linalg.norm(vector), 1e-10)
         emissions.append(matrix @ vector - np.array(penalties))
-        strengths.append(float(np.mean(features.rms[:len(features.times)][mask])) if mask.any() else 0)
+        strengths.append(float(np.mean(features.rms[: len(features.times)][mask])) if mask.any() else 0)
     scores = np.array(emissions)
     # Viterbi cost discourages transient changes without forcing a genre progression.
     costs = scores[0].copy()
@@ -90,6 +101,7 @@ def estimate_chords(features: HarmonicFeatures, start: float, end: float, quarte
         symbol = "N.C." if silent or scores[i, state] < 0.5 else names[state]
         confidence = 0.0 if silent else confidence
         if not events or events[-1].symbol != symbol:
-            events.append(Chord(beat=float(quantize(beat_offsets[i])), symbol=symbol,
-                                confidence=round(confidence, 3)))
+            events.append(
+                Chord(beat=float(quantize(beat_offsets[i])), symbol=symbol, confidence=round(confidence, 3))
+            )
     return events

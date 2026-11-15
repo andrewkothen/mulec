@@ -1,4 +1,5 @@
 """Versioned canonical model. Times are source seconds, beats are quarter notes."""
+
 import math
 from typing import Literal
 from uuid import uuid4
