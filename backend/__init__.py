@@ -1,0 +1,1 @@
+"""Mulec local application."""
