@@ -34,4 +34,4 @@ Inspect generated `tmp/library.png`, `tmp/workspace.png`, `tmp/lead-sheet.png`, 
 - Add melody and export PDF: the PDF intentionally remains a chord chart. Export MusicXML to carry melody notation.
 - Import project JSON: notation survives but playback is unavailable because audio was not bundled.
 
-GitHub Actions are configured but have not run remotely: authenticated private repository access is still required. This session's actual check results are recorded in the handoff, not inferred from CI configuration.
+Local checks passed: 28 Python tests, 2 TypeScript transformation tests, Ruff lint, TypeScript type checking, a production frontend build and one browser acceptance scenario. This includes extracting a 440 Hz monophonic melody from synthesized audio. The private repository is connected; GitHub Actions results must be checked separately from these local results.

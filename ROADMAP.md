@@ -18,6 +18,8 @@ The first priority is a tested upload → genuine analysis → editable chart �
 
 ## Next tested milestones / future GitHub issues
 
+Tracked privately: [beat-grid and meter support (#1)](https://github.com/andrewkothen/mulec/issues/1), [engraved lead-sheet PDF (#2)](https://github.com/andrewkothen/mulec/issues/2), and [mixed-recording accuracy benchmark (#3)](https://github.com/andrewkothen/mulec/issues/3).
+
 1. **Beat-grid accuracy:** user draggable downbeats; pickup/partial-bar support; half/double tempo actions; a percussion/compound-meter test corpus. Retain both estimated and corrected grids.
 2. **Tempo/meter maps:** segment actual tempo changes, edit tempo anchors and per-bar meter, export corresponding tempo/meter events. Verify sync on rubato recordings.
 3. **Harmony quality:** multi-octave spectral whitening, bass-aware/slash-chord confidence, cross-bar context, adaptive change points and an original real-instrument benchmark. Do not claim improvements from synthetic fixtures alone.
@@ -26,7 +28,7 @@ The first priority is a tested upload → genuine analysis → editable chart �
 6. **Form evidence:** similarity matrix and user-reviewed section candidates, irregular phrases and explicit transitions; distinguish suggestions from committed form.
 7. **Project lifecycle:** archive/delete with confirmation, audio relinking for JSON imports, portable project bundles, auto-save/recovery and schema migrations.
 8. **Desktop experience:** validate Windows/Linux manually, package a signed local launcher if desired, monitor memory on 15-minute dense recordings, background cancellation/progress recovery.
-9. **Private source control:** reauthenticate GitHub, create or attach private `mulec`, push tested main/develop and create issues from this backlog. Never make it public or deploy automatically.
+9. **Private source control:** maintain the connected private `andrewkothen/mulec` repository, tested main/develop milestones and issues from this backlog. Never make it public or deploy automatically.
 
 ## Acceptance gates for further work
 

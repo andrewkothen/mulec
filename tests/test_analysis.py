@@ -4,8 +4,20 @@ import soundfile as sf
 
 from backend.analysis.audio import decode
 from backend.analysis.pipeline import analyze
+from backend.analysis.melody import extract_melody
 from backend.fixtures import make_demo
-from backend.models import AnalysisOptions, Project
+from backend.models import AnalysisOptions, Measure, Project
+
+
+def test_monophonic_melody_is_extracted_from_signal():
+    sr = 22050
+    time = np.arange(sr * 2) / sr
+    y = 0.6 * np.sin(2 * np.pi * 440 * time)
+    measures = [Measure(start=0, end=2)]
+    extract_melody(y, sr, 0, measures, 0.5)
+    assert measures[0].notes
+    assert all(n.midi == 69 for n in measures[0].notes)
+    assert all(n.confidence >= 0.5 for n in measures[0].notes)
 
 
 def test_real_audio_pipeline(tmp_path):

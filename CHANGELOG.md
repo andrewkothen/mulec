@@ -7,4 +7,4 @@
 - Added browser playback, chart editing, revision-safe local persistence, undo/redo and print-ready exports.
 - Added original demo synthesis, MusicXML notation preview, experimental monophonic melody, instrument transposition, form view and MIDI export.
 - Added deterministic fixture tests, API persistence/export integration tests, browser acceptance coverage and GitHub Actions configuration.
-- Installed and built the application locally. GitHub push remains blocked by invalid CLI authentication and no repositories exposed by the connected app.
+- Installed and built the application locally, verified the browser workflow, and connected the private `andrewkothen/mulec` repository. Work continues on `develop`, with tested milestones retained on `main`.
