@@ -3,48 +3,74 @@
 from io import BytesIO
 import textwrap
 
-from music21 import bar, clef, expressions, metadata, meter, midi, note, stream, tempo
+from music21 import bar, clef, expressions, layout, metadata, meter, midi, note, stream, tempo
 from music21.musicxml.m21ToXml import GeneralObjectExporter
 from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import A4, letter
 from reportlab.pdfgen import canvas
 
 from backend.models import Project
-from backend.music.theory import chord_object, notation_key
+from backend.music.theory import chord_object, nashville_chord, nashville_reference, notation_key
 
 
-def score(project: Project):
+def score(project: Project, *, rhythm=False):
     result = stream.Score()
     result.metadata = metadata.Metadata(title=project.title, composer=project.composer)
     part = stream.Part()
-    part.partName = "Concert chart"
+    part.partName = ""
+    part.style.printPartName = False
     part.insert(0, clef.TrebleClef())
     part.insert(0, notation_key(project.key, project.key_mode))
     part.insert(0, tempo.MetronomeMark(number=project.bpm))
     last_meter = None
+    prior_symbol = None
     for number, measure in enumerate(project.measures, 1):
         m = stream.Measure(number=number)
+        if not measure.chords:
+            prior_symbol = None
         signature = f"{measure.meter.numerator}/{measure.meter.denominator}"
         if signature != last_meter:
             m.insert(0, meter.TimeSignature(signature))
             last_meter = signature
         if measure.section:
+            if number > 1:
+                m.insert(0, layout.SystemLayout(isNew=True))
             m.insert(0, expressions.RehearsalMark(measure.section))
         if measure.cue:
             m.insert(0, expressions.TextExpression(measure.cue))
         for event in sorted(measure.chords, key=lambda c: c.beat):
+            carry = (
+                rhythm
+                and not event.manual
+                and event.beat == 0
+                and event.symbol == prior_symbol
+                and not measure.section
+                and not measure.repeat_start
+            )
+            prior_symbol = event.symbol
+            if carry:
+                continue
             if event.symbol == "?":
                 continue
             chord = chord_object(event.symbol)
             chord.writeAsChord = False
             m.insert(event.beat, chord)
         position = 0.0
-        for event in sorted(measure.notes, key=lambda n: n.beat):
-            if event.beat > position:
-                m.insert(position, note.Rest(quarterLength=event.beat - position))
-            n = note.Note(event.midi, quarterLength=event.duration)
-            m.insert(event.beat, n)
-            position = event.beat + event.duration
+        if rhythm:
+            beat_length = 4 / measure.meter.denominator
+            for i in range(measure.meter.numerator):
+                slash = note.Unpitched(quarterLength=beat_length)
+                slash.displayStep, slash.displayOctave = "B", 4
+                slash.notehead, slash.noteheadFill, slash.stemDirection = "slash", True, "noStem"
+                m.insert(i * beat_length, slash)
+            position = measure.meter.quarters
+        else:
+            for event in sorted(measure.notes, key=lambda n: n.beat):
+                if event.beat > position:
+                    m.insert(position, note.Rest(quarterLength=event.beat - position))
+                n = note.Note(event.midi, quarterLength=event.duration)
+                m.insert(event.beat, n)
+                position = event.beat + event.duration
         if position < measure.meter.quarters:
             m.insert(position, note.Rest(quarterLength=measure.meter.quarters - position))
         if measure.repeat_start:
@@ -52,12 +78,16 @@ def score(project: Project):
         if measure.repeat_end:
             m.rightBarline = bar.Repeat(direction="end")
         part.append(m)
+    if rhythm:
+        part.streamStatus.beams = True  # Rhythm slashes are stemless, including in eighth-note meters.
     result.append(part)
     return result
 
 
-def musicxml(project: Project) -> bytes:
-    return GeneralObjectExporter(score(project)).parse()
+def musicxml(project: Project, *, rhythm=False) -> bytes:
+    has_melody = any(measure.notes for measure in project.measures)
+    has_harmony = any(chord.symbol not in {"?", "NC", "N.C."} for m in project.measures for chord in m.chords)
+    return GeneralObjectExporter(score(project, rhythm=rhythm or (has_harmony and not has_melody))).parse()
 
 
 def midi_bytes(project: Project) -> bytes:
@@ -68,7 +98,7 @@ def midi_bytes(project: Project) -> bytes:
     return file.writestr()
 
 
-def pdf(project: Project, paper="letter", part_label="Concert pitch") -> bytes:
+def pdf(project: Project, paper="letter", part_label="Concert pitch", *, nashville=False) -> bytes:
     output = BytesIO()
     size = A4 if paper == "a4" else letter
     width, height = size
@@ -77,6 +107,10 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch") -> bytes:
     c.setAuthor(project.composer or "Mulec")
     margin, page = 42, 0
     ink, muted = HexColor("#17262b"), HexColor("#67757a")
+    reference = nashville_reference(project.key, project.key_mode) if nashville else None
+    chart_label = f"Nashville numbers (1 = {reference})" if reference else "Chord chart"
+    if part_label != "Concert pitch":
+        chart_label = f"{part_label} / {chart_label}"
 
     def fit(text, font, maximum, available):
         font_size = maximum
@@ -100,7 +134,7 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch") -> bytes:
         )
         c.setFillColor(muted)
         c.setFont("Helvetica", 9)
-        c.drawRightString(width - margin, height - 114, part_label + " / Chord chart")
+        c.drawRightString(width - margin, height - 114, chart_label)
         c.setStrokeColor(ink)
         c.line(margin, height - 124, width - margin, height - 124)
         c.setFont("Helvetica", 8)
@@ -144,7 +178,7 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch") -> bytes:
                 suffix = f"{m.meter.numerator}/{m.meter.denominator}" + suffix
             c.drawRightString(x + cell_width - 8, y - 8, suffix)
             for j, event in enumerate(sorted(m.chords, key=lambda v: v.beat)):
-                label = event.symbol
+                label = nashville_chord(event.symbol, reference) if reference else event.symbol
                 c.setFillColor(ink)
                 c.setFont(
                     "Helvetica-Bold", fit(label, "Helvetica-Bold", min(14, line_height - 2), cell_width - 40)

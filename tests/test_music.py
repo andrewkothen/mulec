@@ -132,12 +132,53 @@ def test_musicxml_contains_harmony_melody_repeats_and_metadata():
     xml = ET.fromstring(musicxml(example()))
     assert xml.findtext("work/work-title") == "Sunday Sketch"
     assert len(xml.findall(".//harmony")) == 3
+    assert xml.find(".//part-name").attrib["print-object"] == "no"
+    assert not xml.findtext(".//part-name")
     assert xml.find(".//pitch") is not None
     assert xml.find(".//rest") is not None
     assert len(xml.findall(".//repeat")) == 2
     assert xml.findtext(".//rehearsal") == "A"
     assert xml.findtext(".//bass/bass-step") == "F"
     assert midi_bytes(example()).startswith(b"MThd")
+
+
+def test_rhythm_chart_uses_section_breaks_and_meter_without_transcribing_pitches():
+    project = Project(
+        measures=[
+            Measure(section="Intro", chords=[Chord(symbol="A")], notes=[Note()]),
+            Measure(
+                start=2,
+                end=4,
+                meter=Meter(numerator=6, denominator=8),
+                section="Verse",
+                chords=[Chord(symbol="A")],
+            ),
+            Measure(start=4, end=6, meter=Meter(numerator=5), chords=[Chord(symbol="A")]),
+        ]
+    )
+    xml = ET.fromstring(musicxml(project, rhythm=True))
+    intro, verse, continued = xml.findall("./part/measure")
+    assert len(intro.findall(".//notehead")) == 4
+    assert verse.find("print").get("new-system") == "yes"
+    assert verse.findtext(".//rehearsal") == "Verse"
+    assert [head.text for head in verse.findall(".//notehead")] == ["slash"] * 6
+    assert len(continued.findall(".//notehead")) == 5
+    assert verse.find(".//beam") is None
+    assert len(verse.findall(".//harmony")) == 1
+    assert continued.find("harmony") is None
+    assert not xml.findall(".//pitch")
+    assert ET.fromstring(musicxml(project)).find(".//pitch") is not None
+
+
+def test_nashville_pdf_uses_relative_major_and_scale_degrees_for_slash_bass():
+    project = Project(
+        key="C#",
+        key_mode="minor",
+        measures=[Measure(chords=[Chord(symbol="C#m7"), Chord(beat=2, symbol="A/C#")])],
+    )
+    text = PdfReader(BytesIO(pdf(project, nashville=True))).pages[0].extract_text()
+    assert "Nashville numbers (1 = E)" in text
+    assert "6m7" in text and "4/6" in text
 
 
 @pytest.mark.parametrize("paper,width,height", [("letter", 612, 792), ("a4", 595.28, 841.89)])

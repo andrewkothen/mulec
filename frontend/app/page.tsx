@@ -36,6 +36,7 @@ import {
 import Player from "@/components/Player";
 import Notation from "@/components/Notation";
 import MeasureEditor, { TextField } from "@/components/MeasureEditor";
+import { nashvilleChord, nashvilleReference } from "@/lib/nashville";
 
 type Tab = "library" | "new" | "editor" | "settings";
 const KEYS = [
@@ -76,6 +77,7 @@ export default function Home() {
   const [mode, setMode] = useState<"chords" | "lead" | "form">("chords"),
     [part, setPart] = useState("concert"),
     [display, setDisplay] = useState<Project | null>(null);
+  const [chordStyle, setChordStyle] = useState("jazz");
   const [time, setTime] = useState(0),
     [seek, setSeek] = useState<{ time: number; nonce: number } | null>(null);
   const [paper, setPaper] = useState("letter"),
@@ -331,11 +333,16 @@ export default function Home() {
     setBusy(true);
     setError("");
     try {
-      const blob = await exportBlob(project, format, paper, part);
+      const numbers = format === "pdf" && chordStyle === "nashville";
+      const rhythm = format === "musicxml" && mode === "form";
+      const blob = await exportBlob(project, format, paper, part, {
+        nashville: numbers,
+        rhythm,
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${project.title.replace(/[^a-zA-Z0-9 -]/g, "") || "Mulec"}-${part}.${format}`;
+      a.download = `${project.title.replace(/[^a-zA-Z0-9 -]/g, "") || "Mulec"}-${part}${numbers ? "-numbers" : rhythm ? "-form" : ""}.${format}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setShowExport(false);
@@ -410,6 +417,12 @@ export default function Home() {
   }
   const currentBar =
     project?.measures.findIndex((m) => time >= m.start && time < m.end) ?? -1;
+  const numberReference =
+    display && chordStyle === "nashville"
+      ? nashvilleReference(display.key, display.key_mode)
+      : null;
+  const chordLabel = (symbol: string) =>
+    numberReference ? nashvilleChord(symbol, numberReference) : symbol;
   const lowConfidence =
     project?.measures.reduce(
       (n, m) =>
@@ -421,22 +434,6 @@ export default function Home() {
         ).length,
       0,
     ) || 0;
-  const sections =
-    display?.measures.reduce<
-      { name: string; start: number; count: number; chords: string[] }[]
-    >((acc, m, i) => {
-      if (m.section || !acc.length)
-        acc.push({
-          name: m.section || "Unlabeled",
-          start: i,
-          count: 0,
-          chords: [],
-        });
-      const item = acc[acc.length - 1];
-      item.count++;
-      item.chords.push(m.chords.map((c) => c.symbol).join("  ") || "—");
-      return acc;
-    }, []) || [];
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -926,8 +923,20 @@ export default function Home() {
                         · {paper.toUpperCase()}
                       </span>
                       {[
-                        { id: "pdf", label: "Printable chord chart · PDF" },
-                        { id: "musicxml", label: "Notation · MusicXML" },
+                        {
+                          id: "pdf",
+                          label:
+                            chordStyle === "nashville"
+                              ? "Nashville number chart · PDF"
+                              : "Printable chord chart · PDF",
+                        },
+                        {
+                          id: "musicxml",
+                          label:
+                            mode === "form"
+                              ? "Rhythm chart · MusicXML"
+                              : "Notation · MusicXML",
+                        },
                         { id: "midi", label: "Melody · MIDI" },
                         { id: "json", label: "Project · JSON" },
                       ].map((f) => (
@@ -1242,6 +1251,16 @@ export default function Home() {
                       </button>
                     ))}
                   </div>
+                  {mode === "chords" && (
+                    <select
+                      aria-label="Chord notation"
+                      value={chordStyle}
+                      onChange={(e) => setChordStyle(e.target.value)}
+                    >
+                      <option value="jazz">Jazz chord symbols</option>
+                      <option value="nashville">Nashville numbers</option>
+                    </select>
+                  )}
                   <select
                     aria-label="Instrument part"
                     value={part}
@@ -1252,28 +1271,29 @@ export default function Home() {
                     <option value="eb">E♭ instrument (+9)</option>
                   </select>
                 </div>
-                <div className="paper">
+                <div className={mode === "form" ? "paper form-paper" : "paper"}>
                   <div className="paper-kicker">
                     {mode === "lead"
                       ? "LEAD SHEET"
                       : mode === "form"
-                        ? "REHEARSAL ROADMAP"
-                        : "RHYTHM SECTION CHART"}
-                    <span>
-                      {part === "concert"
-                        ? "CONCERT"
-                        : part === "bb"
-                          ? "B♭ PART"
-                          : "E♭ PART"}
-                    </span>
+                        ? "RHYTHM CHART"
+                        : numberReference
+                          ? "NASHVILLE NUMBERS"
+                          : "RHYTHM SECTION CHART"}
+                    {part !== "concert" && (
+                      <span>{part === "bb" ? "B♭ PART" : "E♭ PART"}</span>
+                    )}
                   </div>
                   <h2>{display.title}</h2>
                   <div className="paper-meta">
-                    <span>{display.composer || "Original recording"}</span>
+                    {display.composer && <span>{display.composer}</span>}
                     <span>
                       {display.key} {display.key_mode} ·{" "}
                       {display.meter.numerator}/{display.meter.denominator} · ♩
                       = {Math.round(display.bpm)}
+                      {mode === "chords" &&
+                        numberReference &&
+                        ` · 1 = ${numberReference}`}
                     </span>
                   </div>
                   {mode === "lead" ? (
@@ -1281,36 +1301,12 @@ export default function Home() {
                       <p className="hint">
                         {project.measures.some((m) => m.notes.length)
                           ? "Edit notes by selecting a bar in Chord chart. Export MusicXML for full notation; PDF export is a chord chart."
-                          : "No melody yet. Add notes in a bar’s editor, or analyze a short region with the experimental melody option."}
+                          : "Add melody notes from the bar editor in Chord chart."}
                       </p>
                       <Notation project={project} part={part} />
                     </>
                   ) : mode === "form" ? (
-                    <div className="form-chart">
-                      {sections.map((s, i) => (
-                        <button
-                          key={i}
-                          onClick={() => {
-                            setSelected(s.start);
-                            setMode("chords");
-                            setSeek({
-                              time: project.measures[s.start].start,
-                              nonce: Date.now(),
-                            });
-                          }}
-                        >
-                          <span className="section-box">{s.name}</span>
-                          <div>
-                            <strong>{s.count} bars</strong>
-                            <small>
-                              Bars {s.start + 1}–{s.start + s.count}
-                            </small>
-                            <p>{s.chords.join("  |  ")}</p>
-                          </div>
-                          <ArrowUpRight size={17} />
-                        </button>
-                      ))}
-                    </div>
+                    <Notation project={project} part={part} rhythm />
                   ) : (
                     <div className="measures">
                       {display.measures.map((m, i) => (
@@ -1322,7 +1318,7 @@ export default function Home() {
                             <div className="rehearsal-mark">{m.section}</div>
                           )}
                           <button
-                            aria-label={`Bar ${i + 1}: ${m.chords.map((c) => c.symbol).join(", ") || "empty"}`}
+                            aria-label={`Bar ${i + 1}: ${m.chords.map((c) => chordLabel(c.symbol)).join(", ") || "empty"}`}
                             className={`measure ${selected === i ? "chosen" : ""} ${currentBar === i ? "playing" : ""}`}
                             onClick={() => {
                               setSelected(i);
@@ -1341,7 +1337,13 @@ export default function Home() {
                               {m.chords.length ? (
                                 m.chords.map((c) => (
                                   <span className="chord-event" key={c.id}>
-                                    <strong>{c.symbol}</strong>
+                                    <strong
+                                      title={
+                                        numberReference ? c.symbol : undefined
+                                      }
+                                    >
+                                      {chordLabel(c.symbol)}
+                                    </strong>
                                     <small>
                                       {c.beat + 1}
                                       {!c.manual &&
@@ -1360,26 +1362,30 @@ export default function Home() {
                             {m.cue ? (
                               <span className="cue">{m.cue}</span>
                             ) : (
-                              <span
-                                className="rhythm-slashes"
-                                aria-hidden="true"
-                              >
-                                ／　／　／　／
-                              </span>
+                              !numberReference && (
+                                <span
+                                  className="rhythm-slashes"
+                                  aria-hidden="true"
+                                >
+                                  ／　／　／　／
+                                </span>
+                              )
                             )}
                           </button>
                         </div>
                       ))}
                     </div>
                   )}
-                  <div className="paper-footer">
-                    <span>MULEC</span>
-                    <span>
-                      {part === "concert"
-                        ? "Made for the next rehearsal."
-                        : "Editing uses concert pitch. Preview and exports are transposed."}
-                    </span>
-                  </div>
+                  {mode !== "form" && (
+                    <div className="paper-footer">
+                      <span>MULEC</span>
+                      <span>
+                        {part === "concert"
+                          ? "Made for the next rehearsal."
+                          : "Editing uses concert pitch. Preview and exports are transposed."}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {mode === "chords" && (
                   <button

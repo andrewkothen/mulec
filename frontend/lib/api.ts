@@ -22,11 +22,12 @@ export async function exportBlob(
   format: string,
   paper = "letter",
   part = "concert",
+  style: { nashville?: boolean; rhythm?: boolean } = {},
 ) {
-  const response = await fetch(
-    `/api/export/${format}?paper=${paper}&part=${part}`,
-    json(project),
-  );
+  const query = new URLSearchParams({ paper, part });
+  if (style.nashville) query.set("nashville", "true");
+  if (style.rhythm) query.set("rhythm", "true");
+  const response = await fetch(`/api/export/${format}?${query}`, json(project));
   if (!response.ok) {
     const body = await response.json();
     throw new Error(body.detail || "Export failed");

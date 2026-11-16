@@ -1,5 +1,11 @@
 # Changelog
 
+## Rhythm and number charts — 2026-11-16
+
+- Form now engraves chord changes above beat slashes, with a new staff line at named sections. The rhythm arrangement can be exported as MusicXML.
+- Removed the single-staff part label from the lead sheet and MusicXML.
+- Added a jazz-symbol and Nashville-number switch for the chord chart and its PDF.
+
 ## Local harmony models — 2026-11-16
 
 - Added optional offline S-KEY key estimation and LV-Chordia chord recognition. Close key alternatives appear in the inspector, and estimated chord changes are aligned to the project's beat grid.

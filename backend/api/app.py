@@ -255,20 +255,28 @@ def create_app(data_dir: Path | None = None):
         return transpose_project(body, semitones)
 
     @app.post("/api/export/{format}")
-    def export_project(format: str, body: Project, paper: str = "letter", part: str = "concert"):
+    def export_project(
+        format: str,
+        body: Project,
+        paper: str = "letter",
+        part: str = "concert",
+        nashville: bool = False,
+        rhythm: bool = False,
+    ):
         validate_music(body)
         if paper not in ("letter", "a4") or part not in ("concert", "bb", "eb"):
             raise HTTPException(422, "Unsupported paper size or instrument part")
         semitones = {"concert": 0, "bb": 2, "eb": 9}[part]
         project = transpose_project(body, semitones) if semitones else body
         if format == "musicxml":
-            content, mime = export.musicxml(project), "application/vnd.recordare.musicxml+xml"
+            content, mime = export.musicxml(project, rhythm=rhythm), "application/vnd.recordare.musicxml+xml"
         elif format == "pdf":
             content, mime = (
                 export.pdf(
                     project,
                     paper,
                     {"concert": "Concert pitch", "bb": "Bb instrument", "eb": "Eb instrument"}[part],
+                    nashville=nashville,
                 ),
                 "application/pdf",
             )

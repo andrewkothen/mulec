@@ -57,7 +57,8 @@ If you know the song's key, choose **Analysis options → Known key** before imp
 - Detected beat timing can reflect rubato, but automatic tempo-map segmentation and meter-change inference are not implemented. Applying a uniform grid replaces the timeline explicitly.
 - LV-Chordia estimates chord qualities and inversions. The fallback uses triad, seventh, sus and add9 templates. Check chord voicings and extensions against the recording.
 - Melody is optional, experimental monophonic pYIN, limited to a two-minute region. It cannot isolate vocals/instruments in a mastered mix. Half-beat quantization favors readability; swing changes the feel marking, not the transcription algorithm.
-- Form view groups manually named sections. Repeat suggestions require matching estimated phrases; AABA/blues/ABAC classification is deferred.
+- Form view engraves a rhythm chart with beat slashes, chords, and a new staff line at each named section. Export it as MusicXML from Form. Repeat suggestions require matching estimated phrases; AABA/blues/ABAC classification is deferred.
+- Chord chart can switch between jazz chord symbols and Nashville numbers. The PDF uses the chosen style. Minor keys number from their relative major, and the chart shows which note is 1.
 - **PDF is a chord chart**, not an engraved melody lead sheet. The browser renders MusicXML with OpenSheetMusicDisplay; export MusicXML to a notation application for engraved lead-sheet printing. Repeats are supported, alternate endings and arrangement-specific parts are deferred.
 - JSON does not embed audio. An imported JSON project opens without playback. For a complete backup, copy the entire `data/` directory while Mulec is stopped.
 - No remote downloader is enabled. The source workflow supports YouTube/Bandcamp reference links with local import without circumventing platform restrictions.

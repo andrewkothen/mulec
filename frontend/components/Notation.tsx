@@ -5,9 +5,11 @@ import { exportBlob } from "@/lib/api";
 export default function Notation({
   project,
   part,
+  rhythm = false,
 }: {
   project: Project;
   part: string;
+  rhythm?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(""),
@@ -20,7 +22,7 @@ export default function Notation({
       try {
         const [{ OpenSheetMusicDisplay }, blob] = await Promise.all([
           import("opensheetmusicdisplay"),
-          exportBlob(project, "musicxml", "letter", part),
+          exportBlob(project, "musicxml", "letter", part, { rhythm }),
         ]);
         if (!active || !container.current) return;
         container.current.replaceChildren();
@@ -30,7 +32,11 @@ export default function Notation({
           drawingParameters: "default",
           drawTitle: false,
           drawComposer: false,
+          drawPartNames: false,
+          newSystemFromXML: true,
+          drawMeasureNumbersOnlyAtSystemStart: true,
         });
+        osmd.EngravingRules.RehearsalMarkYOffset = 24;
         await osmd.load(await blob.text());
         if (active) {
           osmd.render();
@@ -50,7 +56,7 @@ export default function Notation({
       active = false;
       clearTimeout(timer);
     };
-  }, [project, part]);
+  }, [project, part, rhythm]);
   return (
     <div className="notation">
       {loading && <p className="muted">Engraving your notation…</p>}

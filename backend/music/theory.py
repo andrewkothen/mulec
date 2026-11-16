@@ -7,6 +7,7 @@ from music21 import harmony, pitch, key
 FLATS = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]
 SHARPS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 ROOT = re.compile(r"^([A-G])([b#]?)(.*)$")
+NASHVILLE_DEGREES = ("1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7")
 
 
 def notation_key(tonic: str, mode: str):
@@ -36,6 +37,24 @@ def pitch_class(name: str) -> int:
     if not re.fullmatch(r"[A-G][b#]?", name):
         raise ValueError("Use a note name such as C, F# or Bb")
     return int(pitch.Pitch(name.replace("b", "-")).pitchClass)
+
+
+def nashville_reference(tonic: str, mode: str) -> str:
+    return conventional_key(pitch_class(tonic) + 3, "major") if mode == "minor" else tonic
+
+
+def nashville_chord(symbol: str, reference: str) -> str:
+    match = ROOT.fullmatch(symbol.replace("♭", "b").replace("♯", "#"))
+    if not match or symbol in {"N.C.", "NC"}:
+        return symbol
+    root, accidental, quality = match.groups()
+    tonic = pitch_class(reference)
+
+    def degree(name):
+        return NASHVILLE_DEGREES[(pitch_class(name) - tonic) % 12]
+
+    quality = re.sub(r"/([A-G][b#]?)$", lambda bass: "/" + degree(bass[1]), quality)
+    return degree(root + accidental) + quality
 
 
 def chord_object(symbol: str):

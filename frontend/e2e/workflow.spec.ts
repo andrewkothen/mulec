@@ -15,8 +15,16 @@ test("theoretical minor keys render and a manual E key survives reload", async (
         {
           start: 0,
           end: 2,
+          section: "Intro",
           chords: [{ symbol: "Dbm" }],
           notes: [{ midi: 61, duration: 4 }],
+        },
+        {
+          start: 2,
+          end: 4,
+          section: "Verse 1",
+          meter: { numerator: 6, denominator: 8 },
+          chords: [{ symbol: "Gb" }],
         },
       ],
     },
@@ -30,6 +38,7 @@ test("theoretical minor keys render and a manual E key survives reload", async (
   await page.getByRole("button", { name: "Lead sheet", exact: true }).click();
   await expect(page.locator(".notation svg").first()).toBeVisible();
   await expect(page.locator(".notation")).not.toContainText("BadKeySignature");
+  await expect(page.locator(".notation")).not.toContainText("Concert chart");
   await page.getByText("Song & beat grid", { exact: true }).click();
   await page
     .getByRole("combobox", { name: /^Key signature/ })
@@ -52,6 +61,11 @@ test("theoretical minor keys render and a manual E key survives reload", async (
     path: "../tmp/key-fix/renderer-regression.png",
     fullPage: true,
   });
+  await page.getByRole("button", { name: "Form", exact: true }).click();
+  const staff = page.locator(".form-paper .notation");
+  await expect(staff.getByText("Intro", { exact: true })).toBeVisible();
+  await expect(staff.getByText("Verse 1", { exact: true })).toBeVisible();
+  await staff.screenshot({ path: "../tmp/pdfs/mixed-meter-form.png" });
 });
 
 test("real audio → editable chart → saved project → printable export", async ({
@@ -121,6 +135,15 @@ test("real audio → editable chart → saved project → printable export", asy
   await page
     .getByRole("combobox", { name: "Instrument part" })
     .selectOption("concert");
+  await page
+    .getByRole("combobox", { name: "Chord notation" })
+    .selectOption("nashville");
+  await expect(page.getByRole("button", { name: /^Bar 1:/ })).toContainText(
+    "b7maj7/4",
+  );
+  await page
+    .getByRole("combobox", { name: "Chord notation" })
+    .selectOption("jazz");
   await page.getByRole("button", { name: /^Bar 1:/ }).click();
   await page.getByText("Melody notes (0)", { exact: true }).click();
   await page.getByRole("button", { name: "Add note", exact: true }).click();
@@ -143,6 +166,9 @@ test("real audio → editable chart → saved project → printable export", asy
     timeout: 30000,
   });
   await page.screenshot({ path: "../tmp/lead-sheet.png", fullPage: true });
+  await page.getByRole("button", { name: "Form", exact: true }).click();
+  await expect(page.locator(".form-paper .notation svg").first()).toBeVisible();
+  await page.screenshot({ path: "../tmp/pdfs/rhythm-chart-preview.png" });
   await page.getByRole("button", { name: "Chord chart", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "../tmp/mobile.png", fullPage: true });
