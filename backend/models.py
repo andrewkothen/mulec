@@ -95,6 +95,7 @@ class Project(Model):
     key: str = Field("C", max_length=12)
     key_mode: Literal["major", "minor"] = "major"
     key_confidence: float = Field(0, ge=0, le=1)
+    key_manual: bool = False
     feel: Literal["straight", "swing", "unspecified"] = "unspecified"
     meter: Meter = Field(default_factory=Meter)
     meter_confidence: float = Field(0, ge=0, le=1)
@@ -125,6 +126,8 @@ class AnalysisOptions(Model):
     end: float | None = Field(None, gt=0)
     bpm: float | None = Field(None, ge=30, le=300)
     meter: Meter = Field(default_factory=Meter)
+    key: str | None = Field(None, pattern=r"^[A-G][b#]?$")
+    key_mode: Literal["major", "minor"] = "major"
     melody: bool = False
     sensitivity: float = Field(0.75, ge=0.5, le=0.99)
 

@@ -38,7 +38,23 @@ import Notation from "@/components/Notation";
 import MeasureEditor, { TextField } from "@/components/MeasureEditor";
 
 type Tab = "library" | "new" | "editor" | "settings";
-const KEYS = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+const KEYS = [
+  "C",
+  "C#",
+  "Db",
+  "D",
+  "Eb",
+  "E",
+  "F",
+  "F#",
+  "Gb",
+  "G",
+  "G#",
+  "Ab",
+  "A",
+  "Bb",
+  "B",
+];
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>("library"),
@@ -74,6 +90,8 @@ export default function Home() {
   const [regionStart, setRegionStart] = useState("0"),
     [regionEnd, setRegionEnd] = useState(""),
     [tempo, setTempo] = useState(""),
+    [knownKey, setKnownKey] = useState(""),
+    [knownMode, setKnownMode] = useState("major"),
     [meter, setMeter] = useState("4/4"),
     [melody, setMelody] = useState(false),
     [sensitivity, setSensitivity] = useState("0.75");
@@ -295,6 +313,8 @@ export default function Home() {
         start: Number(regionStart),
         end: regionEnd ? Number(regionEnd) : null,
         bpm: tempo ? Number(tempo) : null,
+        key: knownKey || null,
+        key_mode: knownMode,
         meter: { numerator, denominator },
         melody,
         sensitivity: Number(sensitivity),
@@ -724,6 +744,29 @@ export default function Home() {
                   </summary>
                   <div className="field-pair">
                     <label>
+                      Known key
+                      <select
+                        value={knownKey}
+                        onChange={(e) => setKnownKey(e.target.value)}
+                      >
+                        <option value="">Estimate automatically</option>
+                        {KEYS.map((k) => (
+                          <option key={k}>{k}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Known key mode
+                      <select
+                        value={knownMode}
+                        disabled={!knownKey}
+                        onChange={(e) => setKnownMode(e.target.value)}
+                      >
+                        <option value="major">Major</option>
+                        <option value="minor">Minor</option>
+                      </select>
+                    </label>
+                    <label>
                       Region start (seconds)
                       <input
                         type="number"
@@ -918,7 +961,11 @@ export default function Home() {
                         {project.key}
                         <small>{project.key_mode === "minor" ? "m" : ""}</small>
                       </strong>
-                      <span>estimated key</span>
+                      <span>
+                        {project.key_manual
+                          ? "key set by you"
+                          : "estimated key · review"}
+                      </span>
                     </div>
                     <div>
                       <strong>
@@ -1000,6 +1047,7 @@ export default function Home() {
                         onChange={(e) =>
                           update((p) => {
                             p.key = e.target.value;
+                            p.key_manual = true;
                           })
                         }
                       >
@@ -1015,6 +1063,7 @@ export default function Home() {
                         onChange={(e) =>
                           update((p) => {
                             p.key_mode = e.target.value as Project["key_mode"];
+                            p.key_manual = true;
                           })
                         }
                       >
@@ -1024,8 +1073,9 @@ export default function Home() {
                     </label>
                   </div>
                   <p className="hint">
-                    Key signature changes spelling, not pitches. Use Transpose
-                    below to move the music.
+                    Your key setting overrides the estimate. It does not
+                    reanalyze chords or transpose pitches. Use Transpose below
+                    to move the music.
                   </p>
                   <label>
                     Feel
@@ -1185,6 +1235,15 @@ export default function Home() {
                   </select>
                 </div>
                 <div className="paper">
+                  {lowConfidence >
+                    project.measures.reduce((n, m) => n + m.chords.length, 0) /
+                      2 && (
+                    <p className="harmony-warning" role="note">
+                      Harmony needs substantial review. These are uncertain
+                      estimates, not a verified transcription. “?” means
+                      unresolved harmony.
+                    </p>
+                  )}
                   <div className="paper-kicker">
                     {mode === "lead"
                       ? "LEAD SHEET"

@@ -2,6 +2,56 @@ import { test, expect } from "@playwright/test";
 import path from "node:path";
 import fs from "node:fs/promises";
 
+test("theoretical minor keys render and a manual E key survives reload", async ({
+  page,
+  request,
+}) => {
+  const imported = await request.post("/api/projects/import", {
+    data: {
+      title: "Key signature regression",
+      key: "Db",
+      key_mode: "minor",
+      measures: [
+        {
+          start: 0,
+          end: 2,
+          chords: [{ symbol: "Dbm" }],
+          notes: [{ midi: 61, duration: 4 }],
+        },
+      ],
+    },
+  });
+  expect(imported.ok()).toBeTruthy();
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: /Key signature regression/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Lead sheet", exact: true }).click();
+  await expect(page.locator(".notation svg").first()).toBeVisible();
+  await expect(page.locator(".notation")).not.toContainText("BadKeySignature");
+  await page.getByText("Song & beat grid", { exact: true }).click();
+  await page.getByRole("combobox", { name: /^Key signature/ }).selectOption("E");
+  await page.getByRole("combobox", { name: /^Mode/ }).selectOption("major");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Saved on this computer",
+  );
+  await expect(page.locator(".notation svg").first()).toBeVisible();
+  const saved = await request.get(
+    `/api/projects/${(await imported.json()).id}`,
+  );
+  expect(await saved.json()).toMatchObject({
+    key: "E",
+    key_mode: "major",
+    key_manual: true,
+  });
+  await page.screenshot({
+    path: "../tmp/key-fix/renderer-regression.png",
+    fullPage: true,
+  });
+});
+
 test("real audio → editable chart → saved project → printable export", async ({
   page,
 }) => {

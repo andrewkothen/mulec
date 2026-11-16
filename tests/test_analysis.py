@@ -5,6 +5,7 @@ import soundfile as sf
 from backend.analysis.audio import decode
 from backend.analysis.pipeline import analyze
 from backend.analysis.melody import extract_melody
+from backend.analysis.harmony import HarmonicFeatures, estimate_chart_chords
 from backend.fixtures import make_demo
 from backend.models import AnalysisOptions, Measure, Project
 
@@ -18,6 +19,29 @@ def test_monophonic_melody_is_extracted_from_signal():
     assert measures[0].notes
     assert all(n.midi == 69 for n in measures[0].notes)
     assert all(n.confidence >= 0.5 for n in measures[0].notes)
+
+
+def test_known_key_overrides_inference(tmp_path):
+    path = make_demo(tmp_path / "override.wav")
+    project = analyze(Project(), path, tmp_path / "out.wav", AnalysisOptions(key="E", key_mode="major"))
+    assert (project.key, project.key_mode, project.key_manual) == ("E", "major", True)
+    assert project.key_confidence == 0
+
+
+def test_single_pitch_is_unresolved_not_a_fabricated_seventh():
+    chroma = np.zeros((12, 200))
+    chroma[8] = 1
+    features = HarmonicFeatures(chroma, np.linspace(0, 4, 200), np.ones(200), "E", "major", 0.1)
+    chords = estimate_chart_chords(features, [Measure(start=0, end=4)], "E")
+    assert [c.symbol for c in chords[0]] == ["?"]
+
+
+def test_clear_borrowed_chord_is_not_forced_into_known_key():
+    chroma = np.zeros((12, 200))
+    chroma[[10, 2, 5]] = 1  # Bb major is borrowed in C, but strongly evidenced.
+    features = HarmonicFeatures(chroma, np.linspace(0, 4, 200), np.ones(200), "C", "major", 0.1)
+    chords = estimate_chart_chords(features, [Measure(start=0, end=4)], "C")
+    assert [c.symbol for c in chords[0]] == ["Bb"]
 
 
 def test_real_audio_pipeline(tmp_path):

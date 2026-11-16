@@ -1,5 +1,11 @@
 # Verification — Mulec 0.1.0
 
+## Key-signature regression fix (2026-11-16)
+
+Db minor previously produced eight flats, causing OSMD/VexFlow to throw `BadKeySignature`. Export now writes the pitch-equivalent C# minor signature (four sharps). Regression coverage checks 38 tonic/mode combinations, unchanged note pitches, unknown harmony versus N.C., known-key overrides, and preservation of clearly evidenced borrowed chords. The real local project was also rendered successfully after its user-supplied key correction to E major. The chord guesses in existing projects were preserved; fixing the renderer does not certify their accuracy.
+
+The conservative harmony update is evaluated on signal-path fixtures, not a validated real-recording accuracy benchmark. Do not use passing engineering tests as evidence that an arbitrary mixed recording has been correctly transcribed.
+
 Verified on macOS arm64 with project-local Python 3.12 and Node 25. The application uses a static production build served on loopback.
 
 ## Reproducible evidence

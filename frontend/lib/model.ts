@@ -44,6 +44,7 @@ export type Project = {
   key: string;
   key_mode: "major" | "minor";
   key_confidence: number;
+  key_manual?: boolean;
   feel: "straight" | "swing" | "unspecified";
   meter: Meter;
   meter_confidence: number;

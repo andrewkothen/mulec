@@ -7,7 +7,57 @@ from pypdf import PdfReader
 
 from backend.models import Chord, Measure, Meter, Note, Project
 from backend.music.export import midi_bytes, musicxml, pdf
-from backend.music.theory import chord_object, quantize, seconds_to_beat, transpose_chord, transpose_project
+from backend.music.theory import (
+    chord_object,
+    quantize,
+    seconds_to_beat,
+    transpose_chord,
+    transpose_project,
+    notation_key,
+)
+
+
+@pytest.mark.parametrize(
+    "tonic",
+    [
+        "C",
+        "C#",
+        "Db",
+        "D",
+        "Eb",
+        "E",
+        "Fb",
+        "E#",
+        "F",
+        "F#",
+        "Gb",
+        "G",
+        "G#",
+        "Ab",
+        "A",
+        "Bb",
+        "B",
+        "Cb",
+        "B#",
+    ],
+)
+@pytest.mark.parametrize("mode", ["major", "minor"])
+def test_all_key_spellings_export_with_supported_signatures(tonic, mode):
+    project = Project(key=tonic, key_mode=mode, measures=[Measure(notes=[Note(midi=61, duration=4)])])
+    xml = ET.fromstring(musicxml(project))
+    assert -7 <= int(xml.findtext(".//key/fifths")) <= 7
+    assert notation_key(tonic, mode).tonic.pitchClass == notation_key(tonic, "major").tonic.pitchClass
+    assert xml.findtext(".//key/mode") == mode
+    assert xml.findtext(".//pitch/alter") == "1"  # respelling signature must not transpose notes
+
+
+def test_db_minor_regression_and_unresolved_harmony():
+    project = Project(key="Db", key_mode="minor", measures=[Measure(chords=[Chord(symbol="?")])])
+    xml = ET.fromstring(musicxml(project))
+    assert xml.findtext(".//key/fifths") == "4"
+    assert xml.find(".//harmony") is None
+    assert "Harmony to review" in musicxml(project).decode()
+    assert transpose_chord("?", 2) == "?"
 
 
 @pytest.mark.parametrize(

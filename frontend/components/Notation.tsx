@@ -38,7 +38,10 @@ export default function Notation({
         }
       } catch (e) {
         if (active) {
-          setError(String(e));
+          container.current?.replaceChildren();
+          setError(
+            `The lead sheet could not be rendered. Check the key in Song & beat grid, or export MusicXML. Details: ${String(e)}`,
+          );
           setLoading(false);
         }
       }

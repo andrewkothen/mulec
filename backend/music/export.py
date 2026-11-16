@@ -3,14 +3,14 @@
 from io import BytesIO
 import textwrap
 
-from music21 import bar, clef, expressions, key, metadata, meter, midi, note, stream, tempo
+from music21 import bar, clef, expressions, metadata, meter, midi, note, stream, tempo
 from music21.musicxml.m21ToXml import GeneralObjectExporter
 from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import A4, letter
 from reportlab.pdfgen import canvas
 
 from backend.models import Project
-from backend.music.theory import chord_object
+from backend.music.theory import chord_object, notation_key
 
 
 def score(project: Project):
@@ -19,7 +19,7 @@ def score(project: Project):
     part = stream.Part()
     part.partName = "Concert chart"
     part.insert(0, clef.TrebleClef())
-    part.insert(0, key.Key(project.key.replace("b", "-"), project.key_mode))
+    part.insert(0, notation_key(project.key, project.key_mode))
     part.insert(0, tempo.MetronomeMark(number=project.bpm))
     last_meter = None
     for number, measure in enumerate(project.measures, 1):
@@ -33,6 +33,9 @@ def score(project: Project):
         if measure.cue:
             m.insert(0, expressions.TextExpression(measure.cue))
         for event in sorted(measure.chords, key=lambda c: c.beat):
+            if event.symbol == "?":
+                m.insert(event.beat, expressions.TextExpression("Harmony to review"))
+                continue
             chord = chord_object(event.symbol)
             chord.writeAsChord = False
             m.insert(event.beat, chord)

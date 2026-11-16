@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from backend.analysis.audio import decode
-from backend.analysis.harmony import estimate_chords, extract_features
+from backend.analysis.harmony import estimate_chart_chords, extract_features
 from backend.analysis.melody import extract_melody
 from backend.analysis.rhythm import analyze_rhythm
 from backend.models import AnalysisOptions, Measure, Project, TempoPoint
@@ -32,9 +32,14 @@ def analyze(
     project.beats = rhythm.beats
     project.meter = options.meter
     project.key, project.key_mode, project.key_confidence = features.key, features.mode, features.confidence
+    if options.key:
+        project.key, project.key_mode = options.key, options.key_mode
+        project.key_manual = True
+        project.key_confidence = 0  # A user setting is not an inference confidence.
     project.warnings = rhythm.warnings + [
         "Chord and key confidence are heuristic scores, not probabilities. Review estimates against the recording.",
         "Mixed recordings, pedal tones and dense voicings can confuse harmony. Extensions and slash basses need manual review.",
+        "A question mark means the harmony is unresolved, not no chord. Key profiles can confuse relative major/minor; use Known key when available.",
     ]
     for a, b in zip(rhythm.boundaries, rhythm.boundaries[1:]):
         project.measures.append(
@@ -42,9 +47,12 @@ def analyze(
                 start=a,
                 end=b,
                 meter=options.meter,
-                chords=estimate_chords(features, a, b, options.meter.quarters),
             )
         )
+    for measure, chords in zip(
+        project.measures, estimate_chart_chords(features, project.measures, options.key, options.key_mode)
+    ):
+        measure.chords = chords
     if project.measures:
         project.measures[0].section = "A"
     progress(76, "Building the rehearsal chart")

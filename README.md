@@ -46,6 +46,8 @@ Once installed and built, the application runs offline. There are no hosted AI c
 
 The **Try an original demo** action synthesizes original CC0 audio, then sends it through exactly the same analysis pipeline as an upload. It does not inject predetermined chord results.
 
+If you know the song's key, choose **Analysis options → Known key** before importing. This overrides automatic key detection. Existing projects can be corrected under **Song & beat grid**; changing a signature does not reanalyze or transpose existing chords. Theoretical signatures such as Db minor are respelled to their practical equivalent during notation export. A `?` chord means unresolved harmony, not a silent passage. Charts dominated by uncertain estimates show a warning.
+
 ## Honest MVP limits
 
 - The engine estimates a starting chart, not a verified transcription. Mixed recordings, prominent bass lines, ambiguous voicings, distortion, drones and complex rhythm can produce wrong results.
