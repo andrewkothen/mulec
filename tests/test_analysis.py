@@ -6,6 +6,7 @@ from backend.analysis.audio import decode
 from backend.analysis.pipeline import analyze
 from backend.analysis.melody import extract_melody
 from backend.analysis.harmony import HarmonicFeatures, estimate_chart_chords
+from backend.analysis.learned_harmony import align_chords, ranked_key
 from backend.fixtures import make_demo
 from backend.models import AnalysisOptions, Measure, Project
 
@@ -42,6 +43,38 @@ def test_clear_borrowed_chord_is_not_forced_into_known_key():
     features = HarmonicFeatures(chroma, np.linspace(0, 4, 200), np.ones(200), "C", "major", 0.1)
     chords = estimate_chart_chords(features, [Measure(start=0, end=4)], "C")
     assert [c.symbol for c in chords[0]] == ["Bb"]
+
+
+def test_learned_harmony_preserves_inversions_and_cropped_timing():
+    predictions = [
+        {"start_time": 0, "end_time": 1, "chord": "F#:min/b3"},
+        {"start_time": 1, "end_time": 2, "chord": "N"},
+        {"start_time": 2, "end_time": 3, "chord": "A:maj/3"},
+    ]
+    chart = align_chords(
+        predictions,
+        [Measure(start=10, end=12), Measure(start=12, end=13)],
+        10,
+        "E",
+        "major",
+        np.ones(300),
+        100,
+    )
+    assert [(c.beat, c.symbol) for c in chart[0]] == [(0, "F#m/A"), (2, "?")]
+    assert [(c.beat, c.symbol) for c in chart[1]] == [(0, "A/C#")]
+    assert chart[0][0].confidence is None
+
+
+def test_learned_key_reports_close_relative_minor():
+    tonic, mode, _, alternatives = ranked_key(
+        [
+            {"key": "E", "mode": "major", "score": 0.44},
+            {"key": "C#", "mode": "minor", "score": 0.28},
+            {"key": "B", "mode": "major", "score": 0.04},
+        ]
+    )
+    assert (tonic, mode) == ("E", "major")
+    assert [(alt.key, alt.mode) for alt in alternatives] == [("C#", "minor")]
 
 
 def test_real_audio_pipeline(tmp_path):

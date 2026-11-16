@@ -1,14 +1,24 @@
 from pathlib import Path
+from tempfile import TemporaryDirectory
+
+import soundfile as sf
 
 from backend.analysis.audio import decode
 from backend.analysis.harmony import estimate_chart_chords, extract_features
+from backend.analysis.learned_harmony import align_chords, predict, ranked_key
 from backend.analysis.melody import extract_melody
 from backend.analysis.rhythm import analyze_rhythm
 from backend.models import AnalysisOptions, Measure, Project, TempoPoint
 
 
 def analyze(
-    project: Project, original: Path, playback: Path, options: AnalysisOptions, progress=lambda *_: None
+    project: Project,
+    original: Path,
+    playback: Path,
+    options: AnalysisOptions,
+    progress=lambda *_: None,
+    *,
+    models: Path | None = None,
 ):
     progress(8, "Decoding local audio")
     audio = decode(original, playback)
@@ -23,7 +33,20 @@ def analyze(
     progress(24, "Finding pulse and beat grid")
     rhythm = analyze_rhythm(y, audio.rate, options.start, options.meter.quarters, options.bpm)
     progress(48, "Listening for key and harmony")
-    features = extract_features(y, audio.rate, options.start)
+    key_predictions, chord_predictions = None, None
+    if models is not None:
+        with TemporaryDirectory() as temp:
+            wave = playback
+            if options.start or end < audio.duration:
+                wave = Path(temp) / "region.wav"
+                sf.write(wave, y, audio.rate)
+            if not options.key:
+                key_predictions = predict("key", wave, models)
+            progress(58, "Tracking chord changes")
+            chord_predictions = predict("chords", wave, models)
+    features = None
+    if not (options.key or key_predictions) or not chord_predictions:
+        features = extract_features(y, audio.rate, options.start)
     project.source.duration = audio.duration
     project.source.sample_rate = audio.rate
     project.waveform = audio.waveform
@@ -31,15 +54,24 @@ def analyze(
     project.tempo_map = [TempoPoint(time=options.start, bpm=rhythm.bpm)]
     project.beats = rhythm.beats
     project.meter = options.meter
-    project.key, project.key_mode, project.key_confidence = features.key, features.mode, features.confidence
     if options.key:
         project.key, project.key_mode = options.key, options.key_mode
         project.key_manual = True
         project.key_confidence = 0  # A user setting is not an inference confidence.
+    elif key_predictions:
+        project.key, project.key_mode, project.key_confidence, project.key_alternatives = ranked_key(
+            key_predictions
+        )
+    else:
+        assert features is not None
+        project.key, project.key_mode, project.key_confidence = (
+            features.key,
+            features.mode,
+            features.confidence,
+        )
     project.warnings = rhythm.warnings + [
-        "Chord and key confidence are heuristic scores, not probabilities. Review estimates against the recording.",
-        "Mixed recordings, pedal tones and dense voicings can confuse harmony. Extensions and slash basses need manual review.",
-        "A question mark means the harmony is unresolved, not no chord. Key profiles can confuse relative major/minor; use Known key when available.",
+        f"Key: {'set by you' if options.key else 'S-KEY' if key_predictions else 'local pitch profiles'}. "
+        f"Chords: {'LV-Chordia' if chord_predictions else 'local chord templates'}.",
     ]
     for a, b in zip(rhythm.boundaries, rhythm.boundaries[1:]):
         project.measures.append(
@@ -49,9 +81,14 @@ def analyze(
                 meter=options.meter,
             )
         )
-    for measure, chords in zip(
-        project.measures, estimate_chart_chords(features, project.measures, options.key, options.key_mode)
-    ):
+    if chord_predictions:
+        chart = align_chords(
+            chord_predictions, project.measures, options.start, project.key, project.key_mode, y, audio.rate
+        )
+    else:
+        assert features is not None
+        chart = estimate_chart_chords(features, project.measures, project.key, project.key_mode)
+    for measure, chords in zip(project.measures, chart):
         measure.chords = chords
     if project.measures:
         project.measures[0].section = "A"
@@ -59,7 +96,11 @@ def analyze(
     # Only suggest repeats backed by identical estimated chord sequences.
     signatures = [tuple(c.symbol for c in m.chords) for m in project.measures]
     for size in (4, 8, 12, 16):
-        if len(signatures) >= size * 2 and signatures[:size] == signatures[size : size * 2]:
+        if (
+            len(signatures) >= size * 2
+            and any(chord not in {"?", "N.C."} for bar in signatures[:size] for chord in bar)
+            and signatures[:size] == signatures[size : size * 2]
+        ):
             project.form_suggestions.append(
                 f"Bars 1–{size} and {size + 1}–{size * 2} have matching chord estimates; possible repeated phrase."
             )

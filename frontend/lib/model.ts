@@ -3,7 +3,7 @@ export type Chord = {
   id: string;
   beat: number;
   symbol: string;
-  confidence: number;
+  confidence: number | null;
   manual: boolean;
 };
 export type Note = {
@@ -45,6 +45,7 @@ export type Project = {
   key_mode: "major" | "minor";
   key_confidence: number;
   key_manual?: boolean;
+  key_alternatives?: { key: string; mode: Project["key_mode"] }[];
   feel: "straight" | "swing" | "unspecified";
   meter: Meter;
   meter_confidence: number;

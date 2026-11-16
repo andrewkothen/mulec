@@ -954,15 +954,6 @@ summary span {
   border-radius: 3px;
   box-shadow: var(--shadow);
 }
-.harmony-warning {
-  margin-bottom: 20px;
-  padding: 12px;
-  border: 1px solid #e1c9a5;
-  background: #fff5e6;
-  color: #765526;
-  font-size: 11px;
-  line-height: 1.7;
-}
 .paper-kicker {
   font-size: 7px;
   letter-spacing: 1.4px;

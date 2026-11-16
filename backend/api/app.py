@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from backend.analysis.learned_harmony import MODEL_DIR
 from backend.analysis.pipeline import analyze
 from backend.fixtures import make_demo
 from backend.models import AnalysisOptions, Project, Source, uid
@@ -136,7 +137,10 @@ def create_app(data_dir: Path | None = None):
             store.job(job_id, {"id": job_id, "status": "running", "progress": percent, "message": message})
 
         try:
-            result = analyze(project, path, store.audio / f"{project.id}.wav", options, progress)
+            models = Path(os.environ.get("MULEC_MODELS_DIR", MODEL_DIR))
+            result = analyze(
+                project, path, store.audio / f"{project.id}.wav", options, progress, models=models
+            )
             store.save(result, new=True)
             store.job(
                 job_id,

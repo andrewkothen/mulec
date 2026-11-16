@@ -31,7 +31,9 @@ test("theoretical minor keys render and a manual E key survives reload", async (
   await expect(page.locator(".notation svg").first()).toBeVisible();
   await expect(page.locator(".notation")).not.toContainText("BadKeySignature");
   await page.getByText("Song & beat grid", { exact: true }).click();
-  await page.getByRole("combobox", { name: /^Key signature/ }).selectOption("E");
+  await page
+    .getByRole("combobox", { name: /^Key signature/ })
+    .selectOption("E");
   await page.getByRole("combobox", { name: /^Mode/ }).selectOption("major");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText(
@@ -54,13 +56,14 @@ test("theoretical minor keys render and a manual E key survives reload", async (
 
 test("real audio → editable chart → saved project → printable export", async ({
   page,
+  baseURL,
 }) => {
   const errors: string[] = [],
     external: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.route("**/*", (route) => {
     if (
-      !route.request().url().startsWith("http://127.0.0.1:8765") &&
+      new URL(route.request().url()).origin !== baseURL &&
       !route.request().url().startsWith("blob:")
     ) {
       external.push(route.request().url());

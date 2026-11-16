@@ -34,7 +34,6 @@ def score(project: Project):
             m.insert(0, expressions.TextExpression(measure.cue))
         for event in sorted(measure.chords, key=lambda c: c.beat):
             if event.symbol == "?":
-                m.insert(event.beat, expressions.TextExpression("Harmony to review"))
                 continue
             chord = chord_object(event.symbol)
             chord.writeAsChord = False

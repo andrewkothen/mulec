@@ -1,5 +1,10 @@
 # Changelog
 
+## Local harmony models — 2026-11-16
+
+- Added optional offline S-KEY key estimation and LV-Chordia chord recognition. Close key alternatives appear in the inspector, and estimated chord changes are aligned to the project's beat grid.
+- Removed repeated uncertainty text from the lead sheet and MusicXML. The editable chord chart retains unresolved events.
+
 ## Key-signature and uncertainty fixes — 2026-11-16
 
 - Fixed the lead-sheet crash caused by theoretical signatures such as Db minor (eight flats). MusicXML now uses an equivalent conventional signature without transposing pitches.

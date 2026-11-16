@@ -28,7 +28,7 @@ class Chord(Model):
     id: str = Field(default_factory=uid, max_length=64)
     beat: float = Field(0, ge=0)
     symbol: str = Field("N.C.", max_length=48)
-    confidence: float = Field(0, ge=0, le=1)
+    confidence: float | None = Field(0, ge=0, le=1)
     manual: bool = False
 
 
@@ -82,6 +82,11 @@ class Source(Model):
     sample_rate: int = 22050
 
 
+class KeyAlternative(Model):
+    key: str = Field(pattern=r"^[A-G][b#]?$")
+    mode: Literal["major", "minor"]
+
+
 class Project(Model):
     schema_version: Literal[1] = 1
     id: str = Field(default_factory=uid, pattern=r"^[a-f0-9-]{36}$")
@@ -96,6 +101,7 @@ class Project(Model):
     key_mode: Literal["major", "minor"] = "major"
     key_confidence: float = Field(0, ge=0, le=1)
     key_manual: bool = False
+    key_alternatives: list[KeyAlternative] = Field(default_factory=list, max_length=2)
     feel: Literal["straight", "swing", "unspecified"] = "unspecified"
     meter: Meter = Field(default_factory=Meter)
     meter_confidence: float = Field(0, ge=0, le=1)

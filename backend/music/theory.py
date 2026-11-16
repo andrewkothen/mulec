@@ -74,6 +74,8 @@ def transpose_chord(symbol: str, semitones: int, prefer_sharps: bool | None = No
 def transpose_project(project, semitones: int):
     copy = project.model_copy(deep=True)
     copy.key = conventional_key(pitch_class(copy.key) + semitones, copy.key_mode)
+    for alternative in copy.key_alternatives:
+        alternative.key = conventional_key(pitch_class(alternative.key) + semitones, alternative.mode)
     prefer_sharps = notation_key(copy.key, copy.key_mode).sharps > 0
     for measure in copy.measures:
         for chord in measure.chords:

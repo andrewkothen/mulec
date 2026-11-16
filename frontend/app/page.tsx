@@ -413,7 +413,12 @@ export default function Home() {
   const lowConfidence =
     project?.measures.reduce(
       (n, m) =>
-        n + m.chords.filter((c) => !c.manual && c.confidence < 0.5).length,
+        n +
+        m.chords.filter(
+          (c) =>
+            !c.manual &&
+            (c.symbol === "?" || (c.confidence !== null && c.confidence < 0.5)),
+        ).length,
       0,
     ) || 0;
   const sections =
@@ -964,7 +969,7 @@ export default function Home() {
                       <span>
                         {project.key_manual
                           ? "key set by you"
-                          : "estimated key · review"}
+                          : "estimated key"}
                       </span>
                     </div>
                     <div>
@@ -974,15 +979,28 @@ export default function Home() {
                       <span>selected meter</span>
                     </div>
                   </div>
-                  <div className="review-note">
-                    <span className="confidence-dot" />
-                    <p>
-                      {lowConfidence
-                        ? `${lowConfidence} chord estimates to review`
-                        : "Listen through and review the chart"}
-                      <small>Amber dots mark uncertain harmony.</small>
-                    </p>
-                  </div>
+                  {!project.key_manual &&
+                    !!project.key_alternatives?.length && (
+                      <p className="hint">
+                        Also plausible:{" "}
+                        {project.key_alternatives
+                          .map((k) => `${k.key} ${k.mode}`)
+                          .join(", ")}
+                        .
+                      </p>
+                    )}
+                  {lowConfidence > 0 && (
+                    <div className="review-note">
+                      <span className="confidence-dot" />
+                      <p>
+                        {lowConfidence} uncertain chord{" "}
+                        {lowConfidence === 1 ? "event" : "events"}
+                        <small>
+                          Unresolved chords appear as “?” in Chord chart.
+                        </small>
+                      </p>
+                    </div>
+                  )}
                 </div>
                 {selected !== null && project.measures[selected] ? (
                   <MeasureEditor
@@ -1235,15 +1253,6 @@ export default function Home() {
                   </select>
                 </div>
                 <div className="paper">
-                  {lowConfidence >
-                    project.measures.reduce((n, m) => n + m.chords.length, 0) /
-                      2 && (
-                    <p className="harmony-warning" role="note">
-                      Harmony needs substantial review. These are uncertain
-                      estimates, not a verified transcription. “?” means
-                      unresolved harmony.
-                    </p>
-                  )}
                   <div className="paper-kicker">
                     {mode === "lead"
                       ? "LEAD SHEET"
@@ -1335,11 +1344,12 @@ export default function Home() {
                                     <strong>{c.symbol}</strong>
                                     <small>
                                       {c.beat + 1}
-                                      {!c.manual && c.confidence < 0.5 && (
-                                        <i
-                                          title={`Confidence ${Math.round(c.confidence * 100)}%`}
-                                        />
-                                      )}
+                                      {!c.manual &&
+                                        (c.symbol === "?" ||
+                                          (c.confidence !== null &&
+                                            c.confidence < 0.5)) && (
+                                          <i title="Tentative harmony" />
+                                        )}
                                     </small>
                                   </span>
                                 ))

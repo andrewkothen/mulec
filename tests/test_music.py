@@ -56,7 +56,7 @@ def test_db_minor_regression_and_unresolved_harmony():
     xml = ET.fromstring(musicxml(project))
     assert xml.findtext(".//key/fifths") == "4"
     assert xml.find(".//harmony") is None
-    assert "Harmony to review" in musicxml(project).decode()
+    assert xml.find(".//words") is None
     assert transpose_chord("?", 2) == "?"
 
 

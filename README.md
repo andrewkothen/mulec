@@ -38,7 +38,7 @@ Once installed and built, the application runs offline. There are no hosted AI c
 ## The working workflow
 
 1. **New transcription:** import WAV, FLAC, MP3, M4A, OGG or AIFF. The limit is 150 MB / 15 minutes. Optionally specify a time region, tempo override and meter. YouTube/Bandcamp links are stored as references; supply an authorized local file for analysis.
-2. **Analyze:** local decoding, beat tracking, key estimation and conservative chroma-based chord recognition produce a measure-based chart. The progress indicator reports real processing stages.
+2. **Analyze:** local decoding, beat tracking, key estimation and chord recognition produce a measure-based chart. The progress indicator reports real processing stages.
 3. **Review:** listen with the waveform, change playback speed, loop a region and select a bar to seek to it. Amber markers identify uncertain chord estimates.
 4. **Edit:** change chord symbols and beat positions, add/remove changes, edit section labels and cues, add/delete/split bars, add melody notes, correct bar timing, or apply a uniform tempo/meter grid. Undo/redo retains up to 80 edits. Chord syntax includes `Cmaj7`, `Dm7`, `G7b9`, `Fm7b5`, `Bb/F` and `N.C.`.
 5. **Save:** projects persist in SQLite; a revision check prevents overwriting a newer save from another tab. Analysis always creates a new project, so it cannot overwrite corrections.
@@ -46,14 +46,16 @@ Once installed and built, the application runs offline. There are no hosted AI c
 
 The **Try an original demo** action synthesizes original CC0 audio, then sends it through exactly the same analysis pipeline as an upload. It does not inject predetermined chord results.
 
-If you know the song's key, choose **Analysis options → Known key** before importing. This overrides automatic key detection. Existing projects can be corrected under **Song & beat grid**; changing a signature does not reanalyze or transpose existing chords. Theoretical signatures such as Db minor are respelled to their practical equivalent during notation export. A `?` chord means unresolved harmony, not a silent passage. Charts dominated by uncertain estimates show a warning.
+For stronger harmony analysis, run `python3 scripts/setup_harmony.py` after the regular setup. This installs [S-KEY](https://github.com/deezer/skey) for key estimation and [LV-Chordia](https://github.com/openmirlab/lv-chordia) for chord changes in separate local CPU environments. Deezer licenses the S-KEY weights for noncommercial research only. The download happens once. New imports use the models automatically and fall back to pitch profiles or chord templates if a model is unavailable. **Analysis notes** names the method used. Close key alternatives appear beside the estimated key.
+
+If you know the song's key, choose **Analysis options → Known key** before importing. This overrides automatic key detection. Changing the signature under **Song & beat grid** applies to the notation. Theoretical signatures such as Db minor are respelled to their practical equivalent during notation export. Unresolved chord events appear as `?` in Chord chart and are omitted from the engraved staff and MusicXML.
 
 ## Honest MVP limits
 
 - The engine estimates a starting chart, not a verified transcription. Mixed recordings, prominent bass lines, ambiguous voicings, distortion, drones and complex rhythm can produce wrong results.
 - Meter is user-selected, with zero automatic confidence. The first detected beat is provisionally grouped as a downbeat. Tempo may be half/double time. Correct the beat grid before treating bar numbers as authoritative.
 - Detected beat timing can reflect rubato, but automatic tempo-map segmentation and meter-change inference are not implemented. Applying a uniform grid replaces the timeline explicitly.
-- Harmony uses triads, sevenths, sus and add9 templates with smoothing. It does **not** automatically claim altered extensions or slash-bass precision. Those symbols can be entered manually.
+- LV-Chordia estimates chord qualities and inversions. The fallback uses triad, seventh, sus and add9 templates. Check chord voicings and extensions against the recording.
 - Melody is optional, experimental monophonic pYIN, limited to a two-minute region. It cannot isolate vocals/instruments in a mastered mix. Half-beat quantization favors readability; swing changes the feel marking, not the transcription algorithm.
 - Form view groups manually named sections. Repeat suggestions require matching estimated phrases; AABA/blues/ABAC classification is deferred.
 - **PDF is a chord chart**, not an engraved melody lead sheet. The browser renders MusicXML with OpenSheetMusicDisplay; export MusicXML to a notation application for engraved lead-sheet printing. Repeats are supported, alternate endings and arrangement-specific parts are deferred.
