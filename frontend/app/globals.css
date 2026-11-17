@@ -1235,6 +1235,13 @@ summary span {
   min-height: 200px;
   overflow: hidden;
 }
+.score-playhead {
+  stroke: #c35436;
+  stroke-width: 2px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
 .settings-page {
   max-width: 850px;
 }

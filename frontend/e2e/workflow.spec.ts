@@ -165,9 +165,25 @@ test("real audio → editable chart → saved project → printable export", asy
   await expect(page.locator(".notation svg").first()).toBeVisible({
     timeout: 30000,
   });
+  const playhead = page.locator(".notation .score-playhead");
+  await page.getByRole("spinbutton", { name: "To (s)" }).fill("2.8");
+  const loop = page.getByRole("button", { name: "Loop selected region" });
+  await loop.click();
+  await expect(playhead).toHaveAttribute("data-bar", "1");
+  const initialX = Number(await playhead.getAttribute("x1"));
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect
+    .poll(async () => Number(await playhead.getAttribute("x1")))
+    .toBeGreaterThan(initialX + 5);
+  await expect(playhead).toHaveAttribute("data-bar", "2");
+  await expect(playhead).toHaveAttribute("data-bar", "1");
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await loop.click();
   await page.screenshot({ path: "../tmp/lead-sheet.png", fullPage: true });
+  await page.getByRole("button", { name: "Chord chart", exact: true }).click();
+  await page.getByRole("button", { name: /^Bar 5:/ }).click();
   await page.getByRole("button", { name: "Form", exact: true }).click();
-  await expect(page.locator(".form-paper .notation svg").first()).toBeVisible();
+  await expect(playhead).toHaveAttribute("data-bar", "5");
   await page.screenshot({ path: "../tmp/pdfs/rhythm-chart-preview.png" });
   await page.getByRole("button", { name: "Chord chart", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });

@@ -78,7 +78,7 @@ export default function Home() {
     [part, setPart] = useState("concert"),
     [display, setDisplay] = useState<Project | null>(null);
   const [chordStyle, setChordStyle] = useState("jazz");
-  const [time, setTime] = useState(0),
+  const [time, setTime] = useState<number | null>(null),
     [seek, setSeek] = useState<{ time: number; nonce: number } | null>(null);
   const [paper, setPaper] = useState("letter"),
     [dark, setDark] = useState(false),
@@ -170,7 +170,8 @@ export default function Home() {
     setSelected(null);
     setPart("concert");
     setTab("editor");
-    setTime(0);
+    setTime(null);
+    setSeek(null);
     setError("");
   }
   async function open(id: string) {
@@ -415,8 +416,17 @@ export default function Home() {
       p.measures[selected] = m;
     });
   }
+  // Media seeks can land a fraction of a sample before the requested bar start.
+  const barTime =
+    time === null
+      ? null
+      : time + 1 / Math.max(8000, project?.source.sample_rate ?? 22050);
   const currentBar =
-    project?.measures.findIndex((m) => time >= m.start && time < m.end) ?? -1;
+    barTime === null
+      ? -1
+      : (project?.measures.findIndex(
+          (m) => barTime >= m.start && barTime < m.end,
+        ) ?? -1);
   const numberReference =
     display && chordStyle === "nashville"
       ? nashvilleReference(display.key, display.key_mode)
@@ -1303,10 +1313,21 @@ export default function Home() {
                           ? "Edit notes by selecting a bar in Chord chart. Export MusicXML for full notation; PDF export is a chord chart."
                           : "Add melody notes from the bar editor in Chord chart."}
                       </p>
-                      <Notation project={project} part={part} />
+                      <Notation
+                        project={project}
+                        part={part}
+                        time={time}
+                        currentBar={currentBar}
+                      />
                     </>
                   ) : mode === "form" ? (
-                    <Notation project={project} part={part} rhythm />
+                    <Notation
+                      project={project}
+                      part={part}
+                      time={time}
+                      currentBar={currentBar}
+                      rhythm
+                    />
                   ) : (
                     <div className="measures">
                       {display.measures.map((m, i) => (

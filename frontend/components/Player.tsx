@@ -11,7 +11,7 @@ export default function Player({
 }: {
   project: Project;
   seek: { time: number; nonce: number } | null;
-  onTime: (t: number) => void;
+  onTime: (t: number | null) => void;
 }) {
   const container = useRef<HTMLDivElement>(null),
     wave = useRef<WaveSurfer | null>(null);
@@ -52,10 +52,19 @@ export default function Player({
       normalize: true,
     });
     wave.current = ws;
-    ws.on("ready", () => setReady(true));
+    const media = ws.getMediaElement();
+    const onMetadata = () => {
+      setReady(true);
+      callback.current(ws.getCurrentTime());
+    };
+    ws.on("ready", () => {
+      if (media.readyState > 0) onMetadata();
+      else media.addEventListener("loadedmetadata", onMetadata, { once: true });
+    });
     ws.on("play", () => setPlaying(true));
     ws.on("pause", () => setPlaying(false));
     ws.on("timeupdate", (t) => {
+      if (media.readyState === 0) return;
       const r = region.current;
       if (r.loop && r.end > r.start && t >= r.end) {
         ws.setTime(r.start);
@@ -70,10 +79,13 @@ export default function Player({
         void ws.play().catch((e) => setError(String(e)));
       }
     });
-    ws.on("error", () =>
-      setError("Audio unavailable. JSON imports contain notation only."),
-    );
+    ws.on("error", () => {
+      setReady(false);
+      callback.current(null);
+      setError("Audio unavailable. JSON imports contain notation only.");
+    });
     return () => {
+      media.removeEventListener("loadedmetadata", onMetadata);
       ws.destroy();
       wave.current = null;
     };
