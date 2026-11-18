@@ -9,12 +9,14 @@ export default function Notation({
   part,
   time,
   currentBar,
+  firstBar = 1,
   rhythm = false,
 }: {
   project: Project;
   part: string;
   time: number | null;
   currentBar: number;
+  firstBar?: number;
   rhythm?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
@@ -38,7 +40,10 @@ export default function Notation({
         const [{ OpenSheetMusicDisplay, unitInPixels }, blob] =
           await Promise.all([
             import("opensheetmusicdisplay"),
-            exportBlob(project, "musicxml", "letter", part, { rhythm }),
+            exportBlob(project, "musicxml", "letter", part, {
+              rhythm,
+              firstBar,
+            }),
           ]);
         if (!active || !container.current) return;
         const target = container.current;
@@ -53,6 +58,7 @@ export default function Notation({
           drawPartNames: false,
           newSystemFromXML: true,
           drawMeasureNumbersOnlyAtSystemStart: true,
+          useXMLMeasureNumbers: true,
         });
         osmd.EngravingRules.RehearsalMarkYOffset = 24;
         // Keep a separate place on the staff for each bar of the recording.
@@ -117,7 +123,7 @@ export default function Notation({
           playhead.setAttribute("x2", String(x));
           playhead.setAttribute("y1", String(stave.getYForLine(0) - 7));
           playhead.setAttribute("y2", String(stave.getYForLine(4) + 7));
-          playhead.dataset.bar = String(currentBar + 1);
+          playhead.dataset.bar = String(currentBar + firstBar);
           if (playhead.parentNode !== page) page.append(playhead);
         };
         let width = -1;
@@ -156,7 +162,7 @@ export default function Notation({
       line?.remove();
       movePlayhead.current = null;
     };
-  }, [project, part, rhythm]);
+  }, [project, part, rhythm, firstBar]);
   return (
     <div className="notation">
       {loading && <p className="muted">Engraving your notation…</p>}

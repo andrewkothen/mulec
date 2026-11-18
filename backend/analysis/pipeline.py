@@ -4,6 +4,7 @@ from tempfile import TemporaryDirectory
 import soundfile as sf
 
 from backend.analysis.audio import decode
+from backend.analysis.form import suggest_sections
 from backend.analysis.harmony import estimate_chart_chords, extract_features
 from backend.analysis.learned_harmony import align_chords, predict, ranked_key
 from backend.analysis.melody import extract_melody
@@ -90,20 +91,14 @@ def analyze(
         chart = estimate_chart_chords(features, project.measures, project.key, project.key_mode)
     for measure, chords in zip(project.measures, chart):
         measure.chords = chords
-    if project.measures:
-        project.measures[0].section = "A"
-    progress(76, "Building the rehearsal chart")
-    # Only suggest repeats backed by identical estimated chord sequences.
-    signatures = [tuple(c.symbol for c in m.chords) for m in project.measures]
-    for size in (4, 8, 12, 16):
-        if (
-            len(signatures) >= size * 2
-            and any(chord not in {"?", "N.C."} for bar in signatures[:size] for chord in bar)
-            and signatures[:size] == signatures[size : size * 2]
-        ):
-            project.form_suggestions.append(
-                f"Bars 1–{size} and {size + 1}–{size * 2} have matching chord estimates; possible repeated phrase."
-            )
+    progress(76, "Listening for song sections")
+    sections = suggest_sections(y, audio.rate, project.measures, options.start)
+    for index, measure in enumerate(project.measures):
+        measure.section = sections.get(measure.id, "A" if index == 0 else "")
+    if len(sections) > 1:
+        project.form_suggestions.append(
+            "Section boundaries and repeated letters are suggested from the recording."
+        )
     if options.melody:
         progress(82, "Extracting an experimental monophonic melody guide")
         extract_melody(y, audio.rate, options.start, project.measures, options.sensitivity)

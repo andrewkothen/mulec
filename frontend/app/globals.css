@@ -1226,6 +1226,64 @@ summary span {
   color: #17201c;
   font-weight: 600;
 }
+.form-nav {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.form-nav-toolbar,
+.form-selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.form-nav-toolbar {
+  justify-content: space-between;
+}
+.form-count {
+  margin: 13px 0 7px;
+}
+.form-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.form-steps button {
+  display: grid;
+  gap: 3px;
+  min-width: 53px;
+  max-width: 150px;
+  padding: 6px 9px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 5px;
+}
+.form-steps button[aria-current="step"] {
+  background: var(--soft);
+  border-color: var(--accent);
+}
+.form-steps button span {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.form-selection {
+  margin-top: 13px;
+}
+.form-selection label {
+  min-width: 120px;
+  max-width: 200px;
+}
+.form-selection .hint {
+  margin: 0;
+}
 .form-paper .paper-meta {
   border-bottom: 0;
   margin-bottom: 17px;

@@ -13,7 +13,7 @@ from backend.models import Project
 from backend.music.theory import chord_object, nashville_chord, nashville_reference, notation_key
 
 
-def score(project: Project, *, rhythm=False):
+def score(project: Project, *, rhythm=False, first_bar=1):
     result = stream.Score()
     result.metadata = metadata.Metadata(title=project.title, composer=project.composer)
     part = stream.Part()
@@ -24,7 +24,7 @@ def score(project: Project, *, rhythm=False):
     part.insert(0, tempo.MetronomeMark(number=project.bpm))
     last_meter = None
     prior_symbol = None
-    for number, measure in enumerate(project.measures, 1):
+    for number, measure in enumerate(project.measures, first_bar):
         m = stream.Measure(number=number)
         if not measure.chords:
             prior_symbol = None
@@ -33,7 +33,7 @@ def score(project: Project, *, rhythm=False):
             m.insert(0, meter.TimeSignature(signature))
             last_meter = signature
         if measure.section:
-            if number > 1:
+            if number > first_bar:
                 m.insert(0, layout.SystemLayout(isNew=True))
             m.insert(0, expressions.RehearsalMark(measure.section))
         if measure.cue:
@@ -84,10 +84,12 @@ def score(project: Project, *, rhythm=False):
     return result
 
 
-def musicxml(project: Project, *, rhythm=False) -> bytes:
+def musicxml(project: Project, *, rhythm=False, first_bar=1) -> bytes:
     has_melody = any(measure.notes for measure in project.measures)
     has_harmony = any(chord.symbol not in {"?", "NC", "N.C."} for m in project.measures for chord in m.chords)
-    return GeneralObjectExporter(score(project, rhythm=rhythm or (has_harmony and not has_melody))).parse()
+    return GeneralObjectExporter(
+        score(project, rhythm=rhythm or (has_harmony and not has_melody), first_bar=first_bar)
+    ).parse()
 
 
 def midi_bytes(project: Project) -> bytes:

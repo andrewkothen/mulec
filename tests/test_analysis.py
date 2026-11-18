@@ -3,6 +3,7 @@ import pytest
 import soundfile as sf
 
 from backend.analysis.audio import decode
+from backend.analysis.form import suggest_sections
 from backend.analysis.pipeline import analyze
 from backend.analysis.melody import extract_melody
 from backend.analysis.harmony import HarmonicFeatures, estimate_chart_chords
@@ -98,6 +99,18 @@ def test_region_and_tempo_override(tmp_path):
     assert p.measures[0].start == 4
     assert p.measures[-1].end == 12
     assert p.source.duration == 16
+
+
+def test_form_maps_an_audio_reprise_on_the_original_timeline():
+    rate = 22050
+    t = np.arange(rate) / rate
+    verse = sum(np.sin(2 * np.pi * pitch * t) for pitch in (130.8, 164.8, 196))
+    chorus = sum(np.sin(2 * np.pi * pitch * t) for pitch in (233.08, 277.18, 349.23, 932.32))
+    chorus *= 1 + 0.25 * np.cos(2 * np.pi * 24 * t)
+    audio = np.concatenate([np.tile(verse, 8), np.tile(chorus, 8), np.tile(verse, 8)]).astype(np.float32)
+    bars = [Measure(start=30 + i, end=31 + i) for i in range(24)]
+    labels = suggest_sections(audio, rate, bars, origin=30)
+    assert labels == {bars[0].id: "A", bars[8].id: "B", bars[16].id: "A"}
 
 
 def test_silent_and_invalid_audio(tmp_path):

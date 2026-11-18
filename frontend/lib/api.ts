@@ -22,11 +22,13 @@ export async function exportBlob(
   format: string,
   paper = "letter",
   part = "concert",
-  style: { nashville?: boolean; rhythm?: boolean } = {},
+  style: { nashville?: boolean; rhythm?: boolean; firstBar?: number } = {},
 ) {
   const query = new URLSearchParams({ paper, part });
   if (style.nashville) query.set("nashville", "true");
   if (style.rhythm) query.set("rhythm", "true");
+  if (style.firstBar && style.firstBar > 1)
+    query.set("first_bar", String(style.firstBar));
   const response = await fetch(`/api/export/${format}?${query}`, json(project));
   if (!response.ok) {
     const body = await response.json();

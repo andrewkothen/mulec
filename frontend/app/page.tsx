@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AudioLines,
   Library,
@@ -35,7 +35,9 @@ import {
 } from "@/lib/model";
 import Player from "@/components/Player";
 import Notation from "@/components/Notation";
+import SongForm from "@/components/SongForm";
 import MeasureEditor, { TextField } from "@/components/MeasureEditor";
+import { songSections, type SongSection } from "@/lib/form";
 import { nashvilleChord, nashvilleReference } from "@/lib/nashville";
 
 type Tab = "library" | "new" | "editor" | "settings";
@@ -78,6 +80,9 @@ export default function Home() {
     [part, setPart] = useState("concert"),
     [display, setDisplay] = useState<Project | null>(null);
   const [chordStyle, setChordStyle] = useState("jazz");
+  const [fullForm, setFullForm] = useState(false);
+  const [sectionId, setSectionId] = useState<string | null>(null);
+  const [findingForm, setFindingForm] = useState(false);
   const [time, setTime] = useState<number | null>(null),
     [seek, setSeek] = useState<{ time: number; nonce: number } | null>(null);
   const [paper, setPaper] = useState("letter"),
@@ -172,6 +177,7 @@ export default function Home() {
     setTab("editor");
     setTime(null);
     setSeek(null);
+    setSectionId(null);
     setError("");
   }
   async function open(id: string) {
@@ -336,14 +342,22 @@ export default function Home() {
     try {
       const numbers = format === "pdf" && chordStyle === "nashville";
       const rhythm = format === "musicxml" && mode === "form";
-      const blob = await exportBlob(project, format, paper, part, {
-        nashville: numbers,
-        rhythm,
-      });
+      const sectionExport = rhythm && sectionChart && activeSection;
+      const blob = await exportBlob(
+        sectionExport ? sectionChart : project,
+        format,
+        paper,
+        part,
+        {
+          nashville: numbers,
+          rhythm,
+          firstBar: sectionExport ? activeSection.first + 1 : undefined,
+        },
+      );
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${project.title.replace(/[^a-zA-Z0-9 -]/g, "") || "Mulec"}-${part}${numbers ? "-numbers" : rhythm ? "-form" : ""}.${format}`;
+      a.download = `${project.title.replace(/[^a-zA-Z0-9 -]/g, "") || "Mulec"}-${part}${numbers ? "-numbers" : sectionExport ? `-bar-${activeSection.first + 1}` : rhythm ? "-form" : ""}.${format}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setShowExport(false);
@@ -427,6 +441,79 @@ export default function Home() {
       : (project?.measures.findIndex(
           (m) => barTime >= m.start && barTime < m.end,
         ) ?? -1);
+  const sections = useMemo(
+    () => songSections(project?.measures ?? []),
+    [project],
+  );
+  const playingSection = sections.find(
+    (s) => currentBar >= s.first && currentBar < s.end,
+  );
+  const activeSection =
+    playingSection ?? sections.find((s) => s.id === sectionId) ?? sections[0];
+  const sectionChart = useMemo(
+    () =>
+      !fullForm && activeSection && project
+        ? {
+            ...project,
+            measures: project.measures.slice(
+              activeSection.first,
+              activeSection.end,
+            ),
+          }
+        : null,
+    [fullForm, activeSection, project],
+  );
+  useEffect(() => {
+    if (playingSection) setSectionId(playingSection.id);
+  }, [playingSection]);
+  const canFindSections =
+    (project?.source.duration ?? 0) > 0 &&
+    (project?.measures.length ?? 0) >= 8 &&
+    sections.length === 1 &&
+    ["a", ""].includes(sections[0].group);
+
+  async function findSections() {
+    if (!project || !canFindSections || findingForm) return;
+    const snapshot = project;
+    setFindingForm(true);
+    setError("");
+    try {
+      const labels = await api<Record<string, string>>(
+        `/projects/${project.id}/form`,
+        json(project),
+      );
+      if (liveProject.current !== snapshot) {
+        if (liveProject.current?.id === snapshot.id)
+          setNotice(
+            "The chart changed while listening. Find sections again with the latest bars.",
+          );
+        return;
+      }
+      if (Object.keys(labels).length <= 1) {
+        setNotice(
+          "No clear section breaks found. Add a section name from any bar’s editor.",
+        );
+        return;
+      }
+      update((p) => {
+        for (const measure of p.measures)
+          measure.section = labels[measure.id] ?? measure.section;
+      });
+      setNotice(
+        "Suggested sections added. Listen through and rename them as needed.",
+      );
+    } catch (e) {
+      if (liveProject.current?.id === snapshot.id) handleError(e);
+    } finally {
+      setFindingForm(false);
+    }
+  }
+
+  function goToSection(section: SongSection) {
+    setSectionId(section.id);
+    setSeek({ time: section.time, nonce: Date.now() });
+  }
+
   const numberReference =
     display && chordStyle === "nashville"
       ? nashvilleReference(display.key, display.key_mode)
@@ -944,7 +1031,9 @@ export default function Home() {
                           id: "musicxml",
                           label:
                             mode === "form"
-                              ? "Rhythm chart · MusicXML"
+                              ? sectionChart
+                                ? "Section rhythm chart · MusicXML"
+                                : "Rhythm chart · MusicXML"
                               : "Notation · MusicXML",
                         },
                         { id: "midi", label: "Melody · MIDI" },
@@ -1281,6 +1370,32 @@ export default function Home() {
                     <option value="eb">E♭ instrument (+9)</option>
                   </select>
                 </div>
+                {mode === "form" && activeSection && (
+                  <SongForm
+                    sections={sections}
+                    active={activeSection}
+                    full={fullForm}
+                    finding={findingForm}
+                    onFind={
+                      canFindSections ? () => void findSections() : undefined
+                    }
+                    onSelect={goToSection}
+                    onView={setFullForm}
+                    onRename={(name) =>
+                      update((p) => {
+                        for (const section of sections) {
+                          if (section.group === activeSection.group)
+                            p.measures[section.first].section = name.trim();
+                        }
+                      })
+                    }
+                    onEditBar={() => {
+                      goToSection(activeSection);
+                      setSelected(activeSection.first);
+                      setMode("chords");
+                    }}
+                  />
+                )}
                 <div className={mode === "form" ? "paper form-paper" : "paper"}>
                   <div className="paper-kicker">
                     {mode === "lead"
@@ -1322,10 +1437,19 @@ export default function Home() {
                     </>
                   ) : mode === "form" ? (
                     <Notation
-                      project={project}
+                      project={sectionChart ?? project}
                       part={part}
                       time={time}
-                      currentBar={currentBar}
+                      currentBar={
+                        sectionChart && activeSection
+                          ? currentBar - activeSection.first
+                          : currentBar
+                      }
+                      firstBar={
+                        sectionChart && activeSection
+                          ? activeSection.first + 1
+                          : 1
+                      }
                       rhythm
                     />
                   ) : (

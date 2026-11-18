@@ -7,12 +7,14 @@ from pathlib import Path
 from threading import BoundedSemaphore
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
+import soundfile as sf
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from backend.analysis.form import suggest_sections
 from backend.analysis.learned_harmony import MODEL_DIR
 from backend.analysis.pipeline import analyze
 from backend.fixtures import make_demo
@@ -254,6 +256,31 @@ def create_app(data_dir: Path | None = None):
         validate_music(body)
         return transpose_project(body, semitones)
 
+    @app.post("/api/projects/{project_id}/form")
+    def find_form(project_id: str, body: Project):
+        original = store.get(project_id)
+        if body.id != project_id or body.source != original.source:
+            raise HTTPException(422, "Use the chart associated with this recording")
+        path = store.audio / f"{original.id}.wav"
+        if not path.exists():
+            raise HTTPException(404, "Attach a recording to find sections")
+        if len(body.measures) < 8:
+            return {}
+        info = sf.info(path)
+        rate = info.samplerate
+        measures = [bar for bar in body.measures if bar.start < info.duration]
+        if len(measures) < 8:
+            return {}
+        if not slots.acquire(blocking=False):
+            raise HTTPException(429, "Wait for the current analyses to finish")
+        try:
+            start = round(measures[0].start * rate)
+            end = round(min(info.duration, measures[-1].end) * rate)
+            samples, _ = sf.read(path, start=start, stop=end, dtype="float32")
+            return suggest_sections(samples, rate, measures, start / rate)
+        finally:
+            slots.release()
+
     @app.post("/api/export/{format}")
     def export_project(
         format: str,
@@ -262,6 +289,7 @@ def create_app(data_dir: Path | None = None):
         part: str = "concert",
         nashville: bool = False,
         rhythm: bool = False,
+        first_bar: int = Query(1, ge=1, le=2000),
     ):
         validate_music(body)
         if paper not in ("letter", "a4") or part not in ("concert", "bb", "eb"):
@@ -269,7 +297,10 @@ def create_app(data_dir: Path | None = None):
         semitones = {"concert": 0, "bb": 2, "eb": 9}[part]
         project = transpose_project(body, semitones) if semitones else body
         if format == "musicxml":
-            content, mime = export.musicxml(project, rhythm=rhythm), "application/vnd.recordare.musicxml+xml"
+            content, mime = (
+                export.musicxml(project, rhythm=rhythm, first_bar=first_bar),
+                "application/vnd.recordare.musicxml+xml",
+            )
         elif format == "pdf":
             content, mime = (
                 export.pdf(

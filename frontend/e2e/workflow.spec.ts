@@ -64,7 +64,14 @@ test("theoretical minor keys render and a manual E key survives reload", async (
   await page.getByRole("button", { name: "Form", exact: true }).click();
   const staff = page.locator(".form-paper .notation");
   await expect(staff.getByText("Intro", { exact: true })).toBeVisible();
+  await page
+    .getByRole("region", { name: "Song roadmap" })
+    .getByRole("button", { name: /Verse 1/ })
+    .click();
   await expect(staff.getByText("Verse 1", { exact: true })).toBeVisible();
+  await expect(staff.getByText("Intro", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Full chart", exact: true }).click();
+  await expect(staff.getByText("Intro", { exact: true })).toBeVisible();
   await staff.screenshot({ path: "../tmp/pdfs/mixed-meter-form.png" });
 });
 
@@ -182,7 +189,18 @@ test("real audio → editable chart → saved project → printable export", asy
   await page.screenshot({ path: "../tmp/lead-sheet.png", fullPage: true });
   await page.getByRole("button", { name: "Chord chart", exact: true }).click();
   await page.getByRole("button", { name: /^Bar 5:/ }).click();
+  const section = page.getByRole("textbox", {
+    name: "Section / rehearsal mark",
+  });
+  await section.fill("A");
+  await section.press("Tab");
   await page.getByRole("button", { name: "Form", exact: true }).click();
+  const roadmap = page.getByRole("region", { name: "Song roadmap" });
+  await expect(roadmap).toContainText("2 occurrences");
+  await expect(playhead).toHaveAttribute("data-bar", "5");
+  await roadmap.getByRole("button", { name: /^A 0:00$/ }).click();
+  await expect(playhead).toHaveAttribute("data-bar", "1");
+  await roadmap.getByRole("button", { name: /^A 0:0[78]$/ }).click();
   await expect(playhead).toHaveAttribute("data-bar", "5");
   await page.screenshot({ path: "../tmp/pdfs/rhythm-chart-preview.png" });
   await page.getByRole("button", { name: "Chord chart", exact: true }).click();
