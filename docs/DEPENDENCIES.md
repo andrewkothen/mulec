@@ -1,6 +1,6 @@
 # Runtime and licensing notes
 
-The repository remains private. No project-wide redistribution license has been selected on the owner's behalf. No recorded music, credentials, model weights or dependency binaries are committed. `uv.lock` and `frontend/package-lock.json` record resolved versions; source builds use those lockfiles.
+The repository remains private. No project-wide redistribution license has been selected on the owner's behalf. No recorded music, credentials or model weights are committed. The chart font is bundled with its OFL license; dependency executables are installed separately. `uv.lock` and `frontend/package-lock.json` record resolved versions; source builds use those lockfiles.
 
 | Component | Purpose | Upstream license / considerations |
 | --- | --- | --- |
@@ -14,6 +14,7 @@ The repository remains private. No project-wide redistribution license has been 
 | soundfile | WAV I/O | BSD-3-Clause; libsndfile dependency is LGPL |
 | music21 | Music theory and notation export | BSD-3-Clause; no bundled corpus content is copied into this repository |
 | ReportLab | Chord-chart PDF generation | BSD-style |
+| MuseJazzText / Mulec Jazz | Offline handwritten chart typography | SIL OFL 1.1; original, renamed TrueType derivative, license and provenance in `frontend/public/fonts/` |
 | imageio-ffmpeg | Local FFmpeg executable discovery | Wrapper BSD-2-Clause; FFmpeg executable licensing depends on its build, often GPL-enabled |
 | SQLite | Local database | Public domain |
 | Playwright, pytest, Ruff | Development verification | Apache-2.0 / MIT / MIT |

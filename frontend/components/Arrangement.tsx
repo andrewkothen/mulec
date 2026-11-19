@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, json } from "@/lib/api";
-import { clock, type Measure, type Project } from "@/lib/model";
+import { clock, type Chord, type Measure, type Project } from "@/lib/model";
 import type { SongSection } from "@/lib/form";
 
 type Part = {
@@ -12,7 +12,13 @@ type Part = {
   ending: boolean;
   from_bar: number;
   length: number;
-  blocks: { first: number; times: number; bars: Measure[] }[];
+  blocks: {
+    first: number;
+    times: number;
+    bars: (Omit<Measure, "chords"> & {
+      chords: (Chord & { display: string })[];
+    })[];
+  }[];
 };
 type Plan = {
   parts: Part[];
@@ -86,9 +92,13 @@ export default function Arrangement({
           </li>
         ))}
       </ol>
+      <p className="arrangement-legend">
+        △ major · - minor · ×4 = four total passes · small numbers = beats
+      </p>
       <div className="arrangement-parts">
         {plan.parts.map((piece) => {
           const times = plan.order.filter((step) => step.part === piece.id);
+          const allBars = piece.blocks.flatMap((block) => block.bars);
           return (
             <section
               className="arrangement-part"
@@ -110,24 +120,81 @@ export default function Arrangement({
               <div className="arrangement-bars">
                 {piece.blocks.flatMap((block) =>
                   block.bars.map((bar, i) => (
-                    <div className="arrangement-bar" key={bar.id}>
+                    <div
+                      className={`arrangement-bar${(i === 0 && block.times > 1) || bar.repeat_start ? " repeat-begin" : ""}${(i === block.bars.length - 1 && block.times > 1) || bar.repeat_end ? " repeat-finish" : ""}`}
+                      key={bar.id}
+                    >
                       <small>{block.first + i}</small>
-                      {bar.chords.length ? (
-                        bar.chords.map((chord) => (
-                          <span key={chord.id}>
-                            <strong>{chord.symbol}</strong>
-                            {bar.chords.length > 1 && (
-                              <sup>{chord.beat + 1}</sup>
-                            )}
-                          </span>
-                        ))
-                      ) : (
-                        <span>—</span>
+                      <div className="bar-harmony">
+                        {bar.chords.length ? (
+                          bar.chords.map((chord) => (
+                            <span
+                              key={chord.id}
+                              title={chord.symbol}
+                              aria-label={chord.symbol}
+                            >
+                              <strong>{chord.display}</strong>
+                              {bar.chords.length > 1 && (
+                                <sup>
+                                  {beatLabel(chord.beat, bar.meter.denominator)}
+                                </sup>
+                              )}
+                            </span>
+                          ))
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </div>
+                      <svg
+                        className="rhythm-staff"
+                        viewBox="0 0 140 30"
+                        preserveAspectRatio="none"
+                        aria-hidden="true"
+                      >
+                        {[5, 10, 15, 20, 25].map((y) => (
+                          <line key={y} x1="0" y1={y} x2="140" y2={y} />
+                        ))}
+                        {((i === 0 && block.times > 1) || bar.repeat_start) && (
+                          <>
+                            <circle cx="7" cy="12.5" r="1" />
+                            <circle cx="7" cy="17.5" r="1" />
+                          </>
+                        )}
+                        {((i === block.bars.length - 1 && block.times > 1) ||
+                          bar.repeat_end) && (
+                          <>
+                            <circle cx="133" cy="12.5" r="1" />
+                            <circle cx="133" cy="17.5" r="1" />
+                          </>
+                        )}
+                        {Array.from(
+                          { length: bar.meter.numerator },
+                          (_, beat) => {
+                            const x =
+                              8 + (124 * (beat + 0.5)) / bar.meter.numerator;
+                            return (
+                              <path
+                                key={beat}
+                                d={`M ${x - 3} 21 L ${x + 4} 10 L ${x + 4} 14 L ${x - 3} 25 Z`}
+                              />
+                            );
+                          },
+                        )}
+                      </svg>
+                      {(allBars.indexOf(bar) === 0 ||
+                        allBars[allBars.indexOf(bar) - 1].meter.numerator !==
+                          bar.meter.numerator ||
+                        allBars[allBars.indexOf(bar) - 1].meter.denominator !==
+                          bar.meter.denominator) && (
+                        <span className="bar-meter">
+                          {bar.meter.numerator}/{bar.meter.denominator}
+                        </span>
                       )}
                       {bar.cue && <em>{bar.cue}</em>}
                       {i === 0 && block.times > 1 && (
                         <em className="pattern-repeat">
-                          Play {block.first}
+                          <span className="sr-only">Play </span>
+                          {block.first}
                           {block.bars.length > 1
                             ? `–${block.first + block.bars.length - 1}`
                             : ""}
@@ -144,4 +211,9 @@ export default function Arrangement({
       </div>
     </div>
   );
+}
+
+function beatLabel(beat: number, denominator: number) {
+  const value = (beat * denominator) / 4 + 1;
+  return value % 1 === 0.5 ? `${Math.floor(value)}&` : String(value);
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## Handwritten rehearsal style — 2026-11-19
+
+- Styled compact arrangements after the supplied reference: rhythm staves/slashes, repeat barlines/counts, short jazz chord symbols and a centered title.
+- Bundled an OFL-licensed MuseJazz-derived font for consistent offline typography in the browser and PDFs; notation text and the editable chord chart use it too.
+- Added a four-page print target with bounded spacing/type-size adjustments. Dense changes wrap before chord text falls below 12 points; music is retained when the target cannot be met.
+
 ## Compact arrangements — 2026-11-19
 
 - Form defaults to a compact arrangement: playback order above unique parts, exact pattern repeat counts, and separately identified variations or changed endings.

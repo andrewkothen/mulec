@@ -10,6 +10,7 @@ from reportlab.lib.pagesizes import A4, letter
 from reportlab.pdfgen import canvas
 
 from backend.models import Project
+from backend.music.chart_style import chart_font
 from backend.music.theory import chord_object, nashville_chord, nashville_reference, notation_key
 
 
@@ -102,6 +103,7 @@ def midi_bytes(project: Project) -> bytes:
 
 def pdf(project: Project, paper="letter", part_label="Concert pitch", *, nashville=False) -> bytes:
     output = BytesIO()
+    font = chart_font()
     size = A4 if paper == "a4" else letter
     width, height = size
     c = canvas.Canvas(output, pagesize=size)
@@ -124,22 +126,22 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch", *, nashvil
         nonlocal page
         page += 1
         c.setFillColor(ink)
-        c.setFont("Helvetica-Bold", fit(project.title, "Helvetica-Bold", 24, width - 2 * margin))
+        c.setFont(font, fit(project.title, font, 24, width - 2 * margin))
         c.drawString(margin, height - 56, project.title)
-        c.setFont("Helvetica", fit(project.composer, "Helvetica", 10, width - 2 * margin))
+        c.setFont(font, fit(project.composer, font, 10, width - 2 * margin))
         c.drawString(margin, height - 74, project.composer)
-        c.setFont("Helvetica", 10)
+        c.setFont(font, 10)
         c.drawString(
             margin,
             height - 98,
             f"{project.key} {project.key_mode}  |  {project.meter.numerator}/{project.meter.denominator}  |  quarter = {project.bpm:g}  |  {project.feel}",
         )
         c.setFillColor(muted)
-        c.setFont("Helvetica", 9)
+        c.setFont(font, 9)
         c.drawRightString(width - margin, height - 114, chart_label)
         c.setStrokeColor(ink)
         c.line(margin, height - 124, width - margin, height - 124)
-        c.setFont("Helvetica", 8)
+        c.setFont(font, 8)
         c.drawString(margin, 25, "MULEC  /  Rehearsal chart")
         c.drawRightString(width - margin, 25, str(page))
         return height - 145
@@ -163,7 +165,7 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch", *, nashvil
             y = header()
         if row[0].section:
             c.setFillColor(ink)
-            c.setFont("Helvetica-Bold", 11)
+            c.setFont(font, 11)
             c.drawString(margin, y, row[0].section)
             y -= 20
         cell_width = (width - 2 * margin) / capacity
@@ -173,7 +175,7 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch", *, nashvil
             c.line(x, y - 8, x, y - row_height + 8)
             c.line(x, y - row_height + 8, x + cell_width, y - row_height + 8)
             c.setFillColor(muted)
-            c.setFont("Helvetica", 8)
+            c.setFont(font, 8)
             c.drawString(x + 8, y - 8, str(index + offset + 1))
             suffix = (" |:" if m.repeat_start else "") + (" :|" if m.repeat_end else "")
             if m.meter != project.meter:
@@ -182,14 +184,12 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch", *, nashvil
             for j, event in enumerate(sorted(m.chords, key=lambda v: v.beat)):
                 label = nashville_chord(event.symbol, reference) if reference else event.symbol
                 c.setFillColor(ink)
-                c.setFont(
-                    "Helvetica-Bold", fit(label, "Helvetica-Bold", min(14, line_height - 2), cell_width - 40)
-                )
+                c.setFont(font, fit(label, font, min(14, line_height - 2), cell_width - 40))
                 c.drawString(x + 8, y - 28 - j * line_height, label)
                 c.setFillColor(muted)
-                c.setFont("Helvetica", 7)
+                c.setFont(font, 7)
                 c.drawRightString(x + cell_width - 8, y - 28 - j * line_height, f"{event.beat + 1:g}")
-            c.setFont("Helvetica-Oblique", 8)
+            c.setFont(font, 8)
             for j, line in enumerate(textwrap.wrap(m.cue, 25)):
                 c.drawString(x + 8, y - 34 - len(m.chords) * line_height - j * 11, line)
         c.line(margin + len(row) * cell_width, y - 8, margin + len(row) * cell_width, y - row_height + 8)
@@ -200,104 +200,6 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch", *, nashvil
 
 
 def arrangement_pdf(project: Project, paper="letter") -> bytes:
-    """Print the arrangement order and each part once, including changed endings."""
-    from xml.sax.saxutils import escape
+    from backend.music.rhythm_pdf import render
 
-    from reportlab.lib import colors
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-
-    from backend.music.arrangement import arrangement
-
-    plan = arrangement(project)
-    output = BytesIO()
-    page_size = A4 if paper == "a4" else letter
-    usable = page_size[0] - 84
-    document = SimpleDocTemplate(
-        output,
-        pagesize=page_size,
-        leftMargin=42,
-        rightMargin=42,
-        topMargin=36,
-        bottomMargin=36,
-        title=project.title,
-        author=project.composer or "Mulec",
-    )
-    title_style = ParagraphStyle("Title", fontName="Helvetica-Bold", fontSize=22, leading=26, spaceAfter=8)
-    text_style = ParagraphStyle("Text", fontName="Helvetica", fontSize=10, leading=14, spaceAfter=8)
-    part_style = ParagraphStyle("Part", fontName="Helvetica-Bold", fontSize=13, leading=17, spaceBefore=10)
-    chord_style = ParagraphStyle(
-        "Chords", fontName="Helvetica-Bold", fontSize=12, leading=18, splitLongWords=True
-    )
-    story = [Paragraph(escape(project.title), title_style)]
-    metadata_text = " · ".join(
-        filter(
-            None,
-            [
-                project.composer,
-                f"{project.key} {project.key_mode}",
-                f"{project.meter.numerator}/{project.meter.denominator}",
-                f"{project.bpm:g} BPM",
-            ],
-        )
-    )
-    story.append(Paragraph(escape(metadata_text), text_style))
-    order = " → ".join(
-        step["name"] + (f" *{step['variant']}" if step["variant"] else "") for step in plan["order"]
-    )
-    # PDF's built-in fonts do not include the arrow glyph.
-    story.append(Paragraph(escape(order.replace("→", "/")), part_style))
-    if any(part["variant"] for part in plan["parts"]):
-        story.append(Paragraph("* Changed ending or variation, shown below.", text_style))
-    story.append(Spacer(1, 12))
-    for part in plan["parts"]:
-        times = [step["time"] for step in plan["order"] if step["part"] == part["id"]]
-        timestamps = ", ".join(f"{int(t) // 60}:{int(t) % 60:02d}" for t in times)
-        heading = escape(part["name"]) + (f" *{part['variant']}" if part["variant"] else "")
-        detail = f"Changed ending from bar {part['from_bar']}" if part["ending"] else f"{part['length']} bars"
-        heading += f"  <font size='9'>{detail} / {timestamps}</font>"
-        header = Paragraph(heading, part_style)
-        cells = []
-        for block in part["blocks"]:
-            for i, measure in enumerate(block["bars"]):
-                events = measure["chords"]
-                symbols = [
-                    escape(event["symbol"])
-                    + (
-                        f"<super><font size='7'> {event['beat'] + 1:g}</font></super>"
-                        if len(events) > 1
-                        else ""
-                    )
-                    for event in events
-                ]
-                label = "  ".join(symbols) or "-"
-                cue = f"<br/><font size='8'>{escape(measure['cue'])}</font>" if measure["cue"] else ""
-                repeat = ""
-                if i == 0 and block["times"] > 1:
-                    last = block["first"] + len(block["bars"]) - 1
-                    scope = str(block["first"]) if len(block["bars"]) == 1 else f"{block['first']}-{last}"
-                    repeat = f"<br/><font size='8'>Play {scope}: {block['times']}x</font>"
-                cells.append(
-                    Paragraph(
-                        f"<font size='7'>{block['first'] + i}</font><br/>{label}{repeat}{cue}", chord_style
-                    )
-                )
-        rows = [cells[offset : offset + 4] for offset in range(0, len(cells), 4)]
-        for i, row in enumerate(rows):
-            row += [""] * (4 - len(row))
-            grid = Table([row], colWidths=[usable / 4] * 4)
-            grid.setStyle(
-                TableStyle(
-                    [
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("LINEBEFORE", (0, 0), (-1, -1), 0.45, colors.grey),
-                        ("LINEAFTER", (-1, 0), (-1, -1), 0.45, colors.grey),
-                        ("TOPPADDING", (0, 0), (-1, -1), 4),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                    ]
-                )
-            )
-            story.append(KeepTogether([header, grid]) if i == 0 else grid)
-        story.append(Spacer(1, 6))
-    document.build(story)
-    return output.getvalue()
+    return render(project, paper)

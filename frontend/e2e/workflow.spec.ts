@@ -267,6 +267,11 @@ test("compact arrangement merges returning parts and exports a bass-player chart
   ).toBeVisible();
   await expect(compact).toContainText("5 written bars");
   await expect(compact).toContainText("Play 1–4: 2×");
+  await page.evaluate(() => document.fonts.ready);
+  expect(
+    await page.evaluate(() => document.fonts.check('16px "Mulec Jazz"')),
+  ).toBeTruthy();
+  await expect(compact.locator(".rhythm-staff")).toHaveCount(5);
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText(
     "Saved on this computer",

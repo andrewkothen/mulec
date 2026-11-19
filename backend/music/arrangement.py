@@ -1,6 +1,7 @@
 """A playable arrangement with recurring parts and explicit changed endings."""
 
 from backend.models import Measure, Project
+from backend.music.chart_style import chord_changes, jazz_symbol
 
 
 def sections(project: Project):
@@ -106,5 +107,10 @@ def arrangement(project: Project):
         )
     for part in parts:
         del part["_signature"]
+        for block in part["blocks"]:
+            for bar in block["bars"]:
+                bar["chords"] = chord_changes(bar["chords"])
+                for chord in bar["chords"]:
+                    chord["display"] = jazz_symbol(chord["symbol"])
     written = sum(len(block["bars"]) for part in parts for block in part["blocks"])
     return {"parts": parts, "order": order, "written_bars": written, "total_bars": len(project.measures)}

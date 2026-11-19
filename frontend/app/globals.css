@@ -1071,7 +1071,7 @@ summary span {
   min-width: 0;
 }
 .chord-event strong {
-  font-family: Georgia, serif;
+  font-family: "Mulec Jazz", sans-serif;
   font-size: 20px;
   line-height: 1.5;
   font-weight: 400;
@@ -1700,6 +1700,33 @@ summary span {
     break-inside: avoid;
   }
 }
+@font-face {
+  font-family: "Mulec Jazz";
+  src: url("/fonts/MulecJazz.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+.paper h2 {
+  font-family: "Mulec Jazz", sans-serif;
+  font-size: 34px;
+  color: #111;
+}
+.form-paper {
+  background: white;
+  color: #111;
+}
+.form-paper .paper-meta {
+  font-family: "Mulec Jazz", sans-serif;
+  font-size: 13px;
+  border-bottom: 0;
+  margin-bottom: 18px;
+  padding-bottom: 0;
+  color: #222;
+}
+.arrangement {
+  color: #111;
+}
 .arrangement-count {
   margin-bottom: 14px;
 }
@@ -1716,8 +1743,10 @@ summary span {
   border: 1px solid #bac4b4;
   border-radius: 3px;
   padding: 7px 12px;
-  color: #223531;
-  font-weight: 600;
+  color: #111;
+  font:
+    18px "Mulec Jazz",
+    sans-serif;
 }
 .arrangement-order small {
   display: block;
@@ -1731,7 +1760,7 @@ summary span {
 }
 .arrangement-parts {
   display: grid;
-  gap: 22px;
+  gap: 18px;
 }
 .arrangement-heading {
   display: flex;
@@ -1741,11 +1770,13 @@ summary span {
   margin-bottom: 9px;
 }
 .arrangement-heading h3 {
-  font-size: 19px;
+  font:
+    22px "Mulec Jazz",
+    sans-serif;
 }
 .arrangement-heading span {
   font-size: 10px;
-  color: #64705e;
+  color: #444;
 }
 .arrangement-block {
   margin-bottom: 12px;
@@ -1759,31 +1790,83 @@ summary span {
 .arrangement-bars {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px 0;
+  gap: 12px 0;
+  align-items: end;
 }
 .arrangement-bar {
-  border-left: 1px solid #99a58f;
-  padding: 4px 9px 8px;
+  position: relative;
+  padding: 0 0 17px;
   min-width: 0;
 }
-.arrangement-bar:last-child {
-  border-right: 1px solid #99a58f;
+.arrangement-bar::before,
+.arrangement-bar::after {
+  content: "";
+  position: absolute;
+  width: 1px;
+  height: 21px;
+  background: #111;
+  bottom: 22px;
+  left: 0;
+}
+.arrangement-bar::after {
+  left: auto;
+  right: 0;
+}
+.arrangement-bar.repeat-begin::before,
+.arrangement-bar.repeat-finish::after {
+  width: 3px;
+  box-shadow: 4px 0 #111;
+}
+.arrangement-bar.repeat-finish::after {
+  box-shadow: -4px 0 #111;
 }
 .arrangement-bar > small {
   display: block;
-  color: #7e8c74;
-  font-size: 9px;
-  margin-bottom: 5px;
+  color: #333;
+  font:
+    11px "Mulec Jazz",
+    sans-serif;
+  padding: 0 9px;
+  margin-bottom: 2px;
 }
-.arrangement-bar > span {
+.bar-harmony {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  padding: 0 8px;
+  min-height: 30px;
+}
+.bar-harmony > span {
   display: inline-block;
-  margin: 0 9px 4px 0;
 }
 .arrangement-bar strong {
-  font-family: Georgia, serif;
-  font-size: 19px;
-  font-weight: 400;
+  font:
+    22px "Mulec Jazz",
+    sans-serif;
   overflow-wrap: anywhere;
+}
+.rhythm-staff {
+  display: block;
+  height: 30px;
+  width: 100%;
+  overflow: visible;
+}
+.rhythm-staff line {
+  stroke: #111;
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+.rhythm-staff path {
+  fill: #111;
+}
+.bar-meter {
+  position: absolute;
+  bottom: 2px;
+  right: 7px;
+  font:
+    9px "Mulec Jazz",
+    sans-serif;
 }
 .arrangement-bar sup {
   font-size: 8px;
@@ -1792,6 +1875,25 @@ summary span {
 .arrangement-bar em {
   display: block;
   font-size: 10px;
+}
+.arrangement-bar .pattern-repeat {
+  position: absolute;
+  top: 0;
+  right: 6px;
+  font:
+    10px "Mulec Jazz",
+    sans-serif;
+  margin: 0;
+}
+.arrangement-bar > em:not(.pattern-repeat) {
+  margin: 4px 8px;
+}
+.arrangement-legend {
+  font:
+    12px "Mulec Jazz",
+    sans-serif;
+  color: #333;
+  margin: -10px 0 20px;
 }
 @media (max-width: 600px) {
   .arrangement-bars {

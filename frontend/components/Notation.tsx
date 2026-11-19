@@ -61,6 +61,8 @@ export default function Notation({
           useXMLMeasureNumbers: true,
         });
         osmd.EngravingRules.RehearsalMarkYOffset = 24;
+        await document.fonts.load('16px "Mulec Jazz"');
+        osmd.EngravingRules.DefaultFontFamily = "Mulec Jazz";
         // Keep a separate place on the staff for each bar of the recording.
         osmd.EngravingRules.AutoGenerateMultipleRestMeasuresFromRestMeasures = false;
         await osmd.load(await blob.text());
