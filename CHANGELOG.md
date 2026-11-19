@@ -1,5 +1,11 @@
 # Changelog
 
+## Shorter musical measures — 2026-11-19
+
+- Corrected Condense to retain five-line staves and rhythm slashes, shortening measure widths instead of removing musical notation.
+- Browser charts use six columns on wide screens, with the same chord font size as the regular arrangement; narrower screens use four or two columns.
+- Condensed PDFs retain staff/rhythm notation and give dense changes additional width. Readability takes priority when a long chart needs more than two pages.
+
 ## Condense form overview — 2026-11-19
 
 - Added a persistent Condense toggle in Form → Arrangement, with matching PDF export.

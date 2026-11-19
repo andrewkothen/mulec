@@ -86,8 +86,8 @@ export default function Arrangement({
       </p>
       {condensed && (
         <p className="hint">
-          Print target: 1–2 pages. Exact repeated phrases use references;
-          changed material stays written out.
+          Shorter musical bars, with staff lines and rhythm slashes. Exact
+          repeated phrases use references; changed material stays written out.
         </p>
       )}
       <ol className="arrangement-order" aria-label="Arrangement order">

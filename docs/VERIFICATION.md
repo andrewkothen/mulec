@@ -1,5 +1,11 @@
 # Verification — Mulec 0.1.0
 
+## Condense spacing correction (2026-11-19)
+
+Condense now retains musical staves and rhythm slashes in browser and PDF, with shorter measures instead of a staff-free shorthand layout. Browser acceptance verifies that staves stay visible and measures are narrower than the regular arrangement. The chord font size is retained, with responsive six/four/two-column layouts. PDF pages were visually inspected; current songs fit two pages except the longest 163-bar chart, which needs three to retain readable musical bars. The earlier all-songs/two-page result below describes the superseded staff-free layout.
+
+Checks passed: 83 Python tests, all 5 browser scenarios, Ruff and production build/type checking. The live browser was refreshed with Condense enabled and five visible staff lines verified.
+
 ## Condense overview milestone (2026-11-19)
 
 Local checks passed: 83 Python tests, 3 TypeScript tests, Ruff, frontend build/type checking, and all 5 browser acceptance scenarios. Condense is a reversible view preference, separate from the saved project. The browser regression verifies switching both directions, exact phrase references, hidden staff lines, persisted preference, matching PDF download, mobile overflow, and unchanged source measures.

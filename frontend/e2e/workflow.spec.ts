@@ -27,6 +27,10 @@ test("Condense switches to a tight form overview, preserves source bars and expo
   await page.getByRole("button", { name: "Form", exact: true }).click();
   const compact = page.getByLabel("Compact arrangement", { exact: true });
   await expect(compact).toContainText("9 written bars");
+  const normalBarWidth = (await compact
+    .locator(".arrangement-bar")
+    .first()
+    .boundingBox())!.width;
   const toggle = page.getByRole("button", { name: "Condense", exact: true });
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
@@ -35,7 +39,12 @@ test("Condense switches to a tight form overview, preserves source bars and expo
   await expect(compact.locator(".arrangement-reference")).toContainText(
     "play A",
   );
-  await expect(compact.locator(".rhythm-staff").first()).toBeHidden();
+  await expect(compact.locator(".rhythm-staff").first()).toBeVisible();
+  const shortBarWidth = (await compact
+    .locator(".arrangement-bar")
+    .first()
+    .boundingBox())!.width;
+  expect(shortBarWidth).toBeLessThan(normalBarWidth * 0.9);
   await toggle.click();
   await expect(compact).toContainText("9 written bars");
   await expect(compact.locator(".rhythm-staff").first()).toBeVisible();

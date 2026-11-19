@@ -1,4 +1,4 @@
-"""Full-width, tightly spaced chord bars for a bird's-eye view of the form."""
+"""Short musical measures with staff lines, rhythm slashes and readable chords."""
 
 from io import BytesIO
 from xml.sax.saxutils import escape
@@ -86,15 +86,30 @@ class ChordRow(Flowable):
             (cue.wrap(w - 12, 10000)[1] for cue, w in zip(self.cues, widths) if cue), default=0
         )
         self.label_height = max(p.wrap(w - 12, 10000)[1] for p, w in zip(self.labels, widths))
-        self.height = self.label_height + 14 + self.cue_height
+        self.height = self.label_height + 31 + self.cue_height
 
     def draw(self):
         c, font, x = self.canv, chart_font(), 0
-        bottom = self.cue_height + 3
+        bottom = self.cue_height + 7
+        staff_top = bottom + 16
         c.setLineWidth(0.4)
         for i, (item, width) in enumerate(zip(self.items, self.widths)):
             end = x + width
-            c.line(x, bottom, x, bottom + self.label_height + 9)
+            if "reference" not in item:
+                for line in range(5):
+                    y = bottom + line * 4
+                    c.line(x, y, end, y)
+                c.line(x, bottom, x, staff_top)
+                for beat in range(item["meter"]["numerator"]):
+                    sx = x + 9 + (width - 18) * (beat + 0.5) / item["meter"]["numerator"]
+                    path = c.beginPath()
+                    path.moveTo(sx - 2.5, bottom + 3)
+                    path.lineTo(sx + 3.5, bottom + 12)
+                    path.lineTo(sx + 3.5, bottom + 9)
+                    path.lineTo(sx - 2.5, bottom)
+                    path.close()
+                    c.drawPath(path, fill=1, stroke=0)
+                c.line(end, bottom, end, staff_top)
             c.setFont(font, 7)
             if "reference" not in item:
                 c.drawString(x + 4, self.height - 7, str(item["number"]))
@@ -103,18 +118,17 @@ class ChordRow(Flowable):
                 for direction in ("repeat_start", "repeat_end"):
                     if item[direction]:
                         rx = x + 3 if direction == "repeat_start" else end - 3
-                        c.line(rx, bottom, rx, bottom + self.label_height + 9)
-                        for y in (bottom + 4, bottom + 8):
+                        c.line(rx, bottom, rx, staff_top)
+                        for y in (bottom + 6, bottom + 10):
                             c.circle(
                                 rx + (3 if direction == "repeat_start" else -3), y, 0.7, stroke=0, fill=1
                             )
             _, h = self.labels[i].wrap(width - 12, 10000)
-            self.labels[i].drawOn(c, x + 6, bottom + 2 + self.label_height - h)
+            self.labels[i].drawOn(c, x + 6, staff_top + 2 + self.label_height - h)
             if self.cues[i]:
                 _, h = self.cues[i].wrap(width - 12, 10000)
                 self.cues[i].drawOn(c, x + 6, bottom - h)
             x = end
-        c.line(self.width, bottom, self.width, bottom + self.label_height + 9)
 
 
 def render(project, paper="letter"):
@@ -212,12 +226,12 @@ def render(project, paper="letter"):
             previous_meter = (project.meter.numerator, project.meter.denominator)
             while offset < len(items):
                 row, widths = [], []
-                for item in items[offset : offset + 8]:
+                for item in items[offset : offset + 6]:
                     if "reference" in item:
                         occupied = max(90, min(usable, stringWidth(item["reference"], font, 12) + 18))
                     else:
                         occupied = max(
-                            44,
+                            78,
                             sum(
                                 stringWidth(jazz_symbol(chord["symbol"]), font, size)
                                 + (13 if len(item["chords"]) > 1 else 5)
