@@ -1,5 +1,11 @@
 # Verification — Mulec 0.1.0
 
+## Compact arrangement milestone (2026-11-19)
+
+Local checks passed: 78 Python tests, 2 TypeScript transformation tests, Ruff, TypeScript type checking, production frontend build, and all 3 browser acceptance scenarios. The new browser scenario merges a returning F occurrence into A, renames the shared group, saves and reloads it, and downloads a compact PDF. Unit coverage retains changed endings, meter and melody differences, and distinguishes reversed harmonic contours from a returning phrase.
+
+The local representative chart chart was regrouped and saved with a backup of its previous section labels. Its 107 performed bars compress to 52 written bars across two visually inspected PDF pages. This is evidence of the arrangement workflow, not a musical accuracy benchmark. Automatic grouping remains a suggestion; semantic Verse/Chorus/etc. names are assigned by the user.
+
 ## Key-signature regression fix (2026-11-16)
 
 Db minor previously produced eight flats, causing OSMD/VexFlow to throw `BadKeySignature`. Export now writes the pitch-equivalent C# minor signature (four sharps). Regression coverage checks 38 tonic/mode combinations, unchanged note pitches, unknown harmony versus N.C., known-key overrides, and preservation of clearly evidenced borrowed chords. The real local project was also rendered successfully after its user-supplied key correction to E major. The chord guesses in existing projects were preserved; fixing the renderer does not certify their accuracy.

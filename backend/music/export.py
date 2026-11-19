@@ -197,3 +197,107 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch", *, nashvil
         index += len(row)
     c.save()
     return output.getvalue()
+
+
+def arrangement_pdf(project: Project, paper="letter") -> bytes:
+    """Print the arrangement order and each part once, including changed endings."""
+    from xml.sax.saxutils import escape
+
+    from reportlab.lib import colors
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    from backend.music.arrangement import arrangement
+
+    plan = arrangement(project)
+    output = BytesIO()
+    page_size = A4 if paper == "a4" else letter
+    usable = page_size[0] - 84
+    document = SimpleDocTemplate(
+        output,
+        pagesize=page_size,
+        leftMargin=42,
+        rightMargin=42,
+        topMargin=36,
+        bottomMargin=36,
+        title=project.title,
+        author=project.composer or "Mulec",
+    )
+    title_style = ParagraphStyle("Title", fontName="Helvetica-Bold", fontSize=22, leading=26, spaceAfter=8)
+    text_style = ParagraphStyle("Text", fontName="Helvetica", fontSize=10, leading=14, spaceAfter=8)
+    part_style = ParagraphStyle("Part", fontName="Helvetica-Bold", fontSize=13, leading=17, spaceBefore=10)
+    chord_style = ParagraphStyle(
+        "Chords", fontName="Helvetica-Bold", fontSize=12, leading=18, splitLongWords=True
+    )
+    story = [Paragraph(escape(project.title), title_style)]
+    metadata_text = " · ".join(
+        filter(
+            None,
+            [
+                project.composer,
+                f"{project.key} {project.key_mode}",
+                f"{project.meter.numerator}/{project.meter.denominator}",
+                f"{project.bpm:g} BPM",
+            ],
+        )
+    )
+    story.append(Paragraph(escape(metadata_text), text_style))
+    order = " → ".join(
+        step["name"] + (f" *{step['variant']}" if step["variant"] else "") for step in plan["order"]
+    )
+    # PDF's built-in fonts do not include the arrow glyph.
+    story.append(Paragraph(escape(order.replace("→", "/")), part_style))
+    if any(part["variant"] for part in plan["parts"]):
+        story.append(Paragraph("* Changed ending or variation, shown below.", text_style))
+    story.append(Spacer(1, 12))
+    for part in plan["parts"]:
+        times = [step["time"] for step in plan["order"] if step["part"] == part["id"]]
+        timestamps = ", ".join(f"{int(t) // 60}:{int(t) % 60:02d}" for t in times)
+        heading = escape(part["name"]) + (f" *{part['variant']}" if part["variant"] else "")
+        detail = f"Changed ending from bar {part['from_bar']}" if part["ending"] else f"{part['length']} bars"
+        heading += f"  <font size='9'>{detail} / {timestamps}</font>"
+        header = Paragraph(heading, part_style)
+        cells = []
+        for block in part["blocks"]:
+            for i, measure in enumerate(block["bars"]):
+                events = measure["chords"]
+                symbols = [
+                    escape(event["symbol"])
+                    + (
+                        f"<super><font size='7'> {event['beat'] + 1:g}</font></super>"
+                        if len(events) > 1
+                        else ""
+                    )
+                    for event in events
+                ]
+                label = "  ".join(symbols) or "-"
+                cue = f"<br/><font size='8'>{escape(measure['cue'])}</font>" if measure["cue"] else ""
+                repeat = ""
+                if i == 0 and block["times"] > 1:
+                    last = block["first"] + len(block["bars"]) - 1
+                    scope = str(block["first"]) if len(block["bars"]) == 1 else f"{block['first']}-{last}"
+                    repeat = f"<br/><font size='8'>Play {scope}: {block['times']}x</font>"
+                cells.append(
+                    Paragraph(
+                        f"<font size='7'>{block['first'] + i}</font><br/>{label}{repeat}{cue}", chord_style
+                    )
+                )
+        rows = [cells[offset : offset + 4] for offset in range(0, len(cells), 4)]
+        for i, row in enumerate(rows):
+            row += [""] * (4 - len(row))
+            grid = Table([row], colWidths=[usable / 4] * 4)
+            grid.setStyle(
+                TableStyle(
+                    [
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("LINEBEFORE", (0, 0), (-1, -1), 0.45, colors.grey),
+                        ("LINEAFTER", (-1, 0), (-1, -1), 0.45, colors.grey),
+                        ("TOPPADDING", (0, 0), (-1, -1), 4),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ]
+                )
+            )
+            story.append(KeepTogether([header, grid]) if i == 0 else grid)
+        story.append(Spacer(1, 6))
+    document.build(story)
+    return output.getvalue()

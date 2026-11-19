@@ -36,6 +36,7 @@ import {
 import Player from "@/components/Player";
 import Notation from "@/components/Notation";
 import SongForm from "@/components/SongForm";
+import Arrangement from "@/components/Arrangement";
 import MeasureEditor, { TextField } from "@/components/MeasureEditor";
 import { songSections, type SongSection } from "@/lib/form";
 import { nashvilleChord, nashvilleReference } from "@/lib/nashville";
@@ -81,6 +82,7 @@ export default function Home() {
     [display, setDisplay] = useState<Project | null>(null);
   const [chordStyle, setChordStyle] = useState("jazz");
   const [fullForm, setFullForm] = useState(false);
+  const [compactForm, setCompactForm] = useState(true);
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [findingForm, setFindingForm] = useState(false);
   const [time, setTime] = useState<number | null>(null),
@@ -340,9 +342,13 @@ export default function Home() {
     setBusy(true);
     setError("");
     try {
-      const numbers = format === "pdf" && chordStyle === "nashville";
+      const arrangementExport =
+        mode === "form" && compactForm && format === "pdf";
+      const numbers =
+        format === "pdf" && !arrangementExport && chordStyle === "nashville";
       const rhythm = format === "musicxml" && mode === "form";
-      const sectionExport = rhythm && sectionChart && activeSection;
+      const sectionExport =
+        rhythm && !compactForm && sectionChart && activeSection;
       const blob = await exportBlob(
         sectionExport ? sectionChart : project,
         format,
@@ -352,12 +358,13 @@ export default function Home() {
           nashville: numbers,
           rhythm,
           firstBar: sectionExport ? activeSection.first + 1 : undefined,
+          arrangement: arrangementExport,
         },
       );
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${project.title.replace(/[^a-zA-Z0-9 -]/g, "") || "Mulec"}-${part}${numbers ? "-numbers" : sectionExport ? `-bar-${activeSection.first + 1}` : rhythm ? "-form" : ""}.${format}`;
+      a.download = `${project.title.replace(/[^a-zA-Z0-9 -]/g, "") || "Mulec"}-${part}${arrangementExport ? "-arrangement" : numbers ? "-numbers" : sectionExport ? `-bar-${activeSection.first + 1}` : rhythm ? "-form" : ""}.${format}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setShowExport(false);
@@ -467,10 +474,7 @@ export default function Home() {
     if (playingSection) setSectionId(playingSection.id);
   }, [playingSection]);
   const canFindSections =
-    (project?.source.duration ?? 0) > 0 &&
-    (project?.measures.length ?? 0) >= 8 &&
-    sections.length === 1 &&
-    ["a", ""].includes(sections[0].group);
+    (project?.source.duration ?? 0) > 0 && (project?.measures.length ?? 0) >= 8;
 
   async function findSections() {
     if (!project || !canFindSections || findingForm) return;
@@ -497,7 +501,7 @@ export default function Home() {
       }
       update((p) => {
         for (const measure of p.measures)
-          measure.section = labels[measure.id] ?? measure.section;
+          measure.section = labels[measure.id] ?? "";
       });
       setNotice(
         "Suggested sections added. Listen through and rename them as needed.",
@@ -1023,17 +1027,21 @@ export default function Home() {
                         {
                           id: "pdf",
                           label:
-                            chordStyle === "nashville"
-                              ? "Nashville number chart · PDF"
-                              : "Printable chord chart · PDF",
+                            mode === "form" && compactForm
+                              ? "Compact arrangement · PDF"
+                              : chordStyle === "nashville"
+                                ? "Nashville number chart · PDF"
+                                : "Printable chord chart · PDF",
                         },
                         {
                           id: "musicxml",
                           label:
                             mode === "form"
-                              ? sectionChart
-                                ? "Section rhythm chart · MusicXML"
-                                : "Rhythm chart · MusicXML"
+                              ? compactForm
+                                ? "Full rhythm chart · MusicXML"
+                                : sectionChart
+                                  ? "Section rhythm chart · MusicXML"
+                                  : "Rhythm chart · MusicXML"
                               : "Notation · MusicXML",
                         },
                         { id: "midi", label: "Melody · MIDI" },
@@ -1375,12 +1383,25 @@ export default function Home() {
                     sections={sections}
                     active={activeSection}
                     full={fullForm}
+                    compact={compactForm}
                     finding={findingForm}
                     onFind={
                       canFindSections ? () => void findSections() : undefined
                     }
                     onSelect={goToSection}
-                    onView={setFullForm}
+                    onView={(full, compact = false) => {
+                      setFullForm(full);
+                      setCompactForm(compact);
+                    }}
+                    onGroup={(group) =>
+                      update((p) => {
+                        const name = sections.find(
+                          (s) => s.group === group,
+                        )?.label;
+                        if (name)
+                          p.measures[activeSection.first].section = name;
+                      })
+                    }
                     onRename={(name) =>
                       update((p) => {
                         for (const section of sections) {
@@ -1401,7 +1422,9 @@ export default function Home() {
                     {mode === "lead"
                       ? "LEAD SHEET"
                       : mode === "form"
-                        ? "RHYTHM CHART"
+                        ? compactForm
+                          ? "ARRANGEMENT"
+                          : "RHYTHM CHART"
                         : numberReference
                           ? "NASHVILLE NUMBERS"
                           : "RHYTHM SECTION CHART"}
@@ -1435,6 +1458,13 @@ export default function Home() {
                         currentBar={currentBar}
                       />
                     </>
+                  ) : mode === "form" && compactForm ? (
+                    <Arrangement
+                      project={project}
+                      part={part}
+                      active={activeSection}
+                      onSelect={goToSection}
+                    />
                   ) : mode === "form" ? (
                     <Notation
                       project={sectionChart ?? project}

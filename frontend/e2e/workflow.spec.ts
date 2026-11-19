@@ -62,6 +62,7 @@ test("theoretical minor keys render and a manual E key survives reload", async (
     fullPage: true,
   });
   await page.getByRole("button", { name: "Form", exact: true }).click();
+  await page.getByRole("button", { name: "By section", exact: true }).click();
   const staff = page.locator(".form-paper .notation");
   await expect(staff.getByText("Intro", { exact: true })).toBeVisible();
   await page
@@ -195,6 +196,7 @@ test("real audio → editable chart → saved project → printable export", asy
   await section.fill("A");
   await section.press("Tab");
   await page.getByRole("button", { name: "Form", exact: true }).click();
+  await page.getByRole("button", { name: "By section", exact: true }).click();
   const roadmap = page.getByRole("region", { name: "Song roadmap" });
   await expect(roadmap).toContainText("2 occurrences");
   await expect(playhead).toHaveAttribute("data-bar", "5");
@@ -225,4 +227,71 @@ test("real audio → editable chart → saved project → printable export", asy
   expect(
     (await fs.readFile("../tmp/mulec-chart.pdf")).subarray(0, 4).toString(),
   ).toBe("%PDF");
+});
+
+test("compact arrangement merges returning parts and exports a bass-player chart", async ({
+  page,
+  request,
+}) => {
+  const harmony = ["C", "Am", "F", "G", "C", "Am", "F", "G"];
+  const response = await request.post("/api/projects/import", {
+    data: {
+      title: "Arrangement regression",
+      measures: Array.from({ length: 24 }, (_, i) => ({
+        start: i * 2,
+        end: i * 2 + 2,
+        section: i === 0 ? "A" : i === 8 ? "B" : i === 16 ? "F" : "",
+        chords: [{ symbol: i >= 8 && i < 16 ? "Dm7" : harmony[i % 8] }],
+      })),
+    },
+  });
+  expect(response.ok()).toBeTruthy();
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: /Arrangement regression/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Form", exact: true }).click();
+  await page.getByRole("button", { name: "Arrangement", exact: true }).click();
+  const compact = page.getByLabel("Compact arrangement", { exact: true });
+  const order = compact.getByRole("list", { name: "Arrangement order" });
+  await order.getByRole("button", { name: /^F/ }).click();
+  await page.getByRole("combobox", { name: "Same part as" }).selectOption("a");
+  await expect(compact.locator(".arrangement-part")).toHaveCount(2);
+  await expect(order.getByRole("button", { name: /^A/ })).toHaveCount(2);
+  const rename = page.getByLabel("Section group name", { exact: true });
+  await rename.fill("Verse");
+  await rename.press("Tab");
+  await expect(
+    compact.getByRole("heading", { name: "Verse", exact: true }),
+  ).toBeVisible();
+  await expect(compact).toContainText("5 written bars");
+  await expect(compact).toContainText("Play 1–4: 2×");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Saved on this computer",
+  );
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Compact arrangement · PDF", exact: true })
+    .click();
+  await (await download).saveAs("../tmp/arrangement/regression.pdf");
+  await page.screenshot({
+    path: "../tmp/arrangement/compact-browser.png",
+    fullPage: true,
+  });
+  await page.reload();
+  await page
+    .getByRole("button", { name: /Arrangement regression/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Form", exact: true }).click();
+  await expect(
+    compact.getByRole("heading", { name: "Verse", exact: true }),
+  ).toBeVisible();
+  const saved = await request.get(
+    `/api/projects/${(await response.json()).id}`,
+  );
+  expect((await saved.json()).measures[16].section).toBe("Verse");
 });

@@ -20,6 +20,7 @@ from backend.analysis.pipeline import analyze
 from backend.fixtures import make_demo
 from backend.models import AnalysisOptions, Project, Source, uid
 from backend.music import export
+from backend.music.arrangement import arrangement as make_arrangement
 from backend.music.theory import chord_object, pitch_class, transpose_project
 from backend.storage import ConflictError, Store
 
@@ -277,9 +278,18 @@ def create_app(data_dir: Path | None = None):
             start = round(measures[0].start * rate)
             end = round(min(info.duration, measures[-1].end) * rate)
             samples, _ = sf.read(path, start=start, stop=end, dtype="float32")
-            return suggest_sections(samples, rate, measures, start / rate)
+            existing = sum(bool(bar.section.strip()) for bar in measures) > 1
+            return suggest_sections(samples, rate, measures, start / rate, existing=existing)
         finally:
             slots.release()
+
+    @app.post("/api/arrangement")
+    def compact_arrangement(body: Project, part: str = "concert"):
+        validate_music(body)
+        if part not in ("concert", "bb", "eb"):
+            raise HTTPException(422, "Unsupported instrument part")
+        shift = {"concert": 0, "bb": 2, "eb": 9}[part]
+        return make_arrangement(transpose_project(body, shift) if shift else body)
 
     @app.post("/api/export/{format}")
     def export_project(
@@ -289,6 +299,7 @@ def create_app(data_dir: Path | None = None):
         part: str = "concert",
         nashville: bool = False,
         rhythm: bool = False,
+        arrangement: bool = False,
         first_bar: int = Query(1, ge=1, le=2000),
     ):
         validate_music(body)
@@ -303,7 +314,9 @@ def create_app(data_dir: Path | None = None):
             )
         elif format == "pdf":
             content, mime = (
-                export.pdf(
+                export.arrangement_pdf(project, paper)
+                if arrangement
+                else export.pdf(
                     project,
                     paper,
                     {"concert": "Concert pitch", "bb": "Bb instrument", "eb": "Eb instrument"}[part],

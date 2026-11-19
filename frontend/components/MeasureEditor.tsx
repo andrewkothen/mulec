@@ -7,11 +7,13 @@ export function TextField({
   value,
   onChange,
   maxLength = 160,
+  list,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   maxLength?: number;
+  list?: string;
 }) {
   return (
     <label>
@@ -20,6 +22,7 @@ export function TextField({
         key={value}
         defaultValue={value}
         maxLength={maxLength}
+        list={list}
         onBlur={(e) => {
           if (e.target.value !== value) onChange(e.target.value);
         }}

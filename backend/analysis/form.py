@@ -62,40 +62,55 @@ def _section_starts(similarity):
     return starts
 
 
-def _match(first, second, timbre, chroma):
-    a, b = first
-    c, d = second
-    longest = max(b - a, d - c)
-    best = 0.0
-    for shift in range(-2, 3):
-        left, right = a + max(0, -shift), c + max(0, shift)
-        length = min(b - left, d - right)
-        if length < 4 or length / longest < 0.75:
-            continue
-        rows, cols = np.arange(left, left + length), np.arange(right, right + length)
-        harmony = chroma[rows, cols].mean()
-        texture = timbre[rows, cols].mean()
-        if harmony >= 0.88 and texture >= 0.35:
-            best = max(best, (0.6 * harmony + 0.4 * texture) * length / longest)
-    return best
+def group_sections(starts, timbre, chroma):
+    """Compare complete contours at different lengths, independent of instrumentation."""
+    count = len(timbre)
+    segments = list(zip(starts, [*starts[1:], count]))
+    representatives, groups = [], []
+    for a, b in segments:
+        scores = []
+        for c, d in representatives:
+            # A local alignment tolerates stretched phrases while requiring coverage
+            # of both passages. Similar key alone is insufficient.
+            distance = 1 - chroma[a:b] @ chroma[c:d].T
+            band = np.abs(np.linspace(0, 1, b - a)[:, None] - np.linspace(0, 1, d - c)[None, :]) <= 0.18
+            allowed = np.where(band, distance, np.inf)
+            similarity = 1 - (allowed.min(axis=0).mean() + allowed.min(axis=1).mean()) / 2
+            texture = float(np.mean(timbre[a:b], axis=0) @ np.mean(timbre[c:d], axis=0))
+            scores.append(similarity if similarity >= 0.93 and texture > -0.2 else 0)
+        if scores and max(scores) > 0:
+            group = int(np.argmax(scores))
+        else:
+            group = len(representatives)
+            representatives.append((a, b))
+        groups.append(group)
+    return groups
 
 
-def suggest_sections(samples, rate, measures: list[Measure], origin=0.0) -> dict[str, str]:
+def suggest_sections(samples, rate, measures: list[Measure], origin=0.0, *, existing=False) -> dict[str, str]:
     """Return suggested section labels keyed by the first bar of each occurrence."""
     if len(measures) < 8 or len(samples) < 2 * rate or np.max(np.abs(samples)) < 1e-5:
         return {}
     timbre, chroma = _bar_features(samples, rate, measures, origin)
     timbre_similarity, chroma_similarity = timbre @ timbre.T, chroma @ chroma.T
-    starts = _section_starts(0.64 * timbre_similarity + 0.36 * chroma_similarity)
-    representatives = []
+    starts = (
+        [i for i, measure in enumerate(measures) if i == 0 or measure.section.strip()]
+        if existing
+        else _section_starts(0.64 * timbre_similarity + 0.36 * chroma_similarity)
+    )
+    groups = group_sections(starts, timbre, chroma)
     labels = {}
-    for start, end in zip(starts, [*starts[1:], len(measures)]):
-        segment = (start, end)
-        matches = [_match(segment, prior, timbre_similarity, chroma_similarity) for prior in representatives]
-        if matches and max(matches) > 0:
-            group = int(np.argmax(matches))
-        else:
-            group = len(representatives)
-            representatives.append(segment)
-        labels[measures[start].id] = chr(65 + group) if group < 26 else f"Section {group + 1}"
+    names = {}
+    for start, group in zip(starts, groups):
+        name = measures[start].section.strip()
+        automatic = (len(name) == 1 and name.isupper()) or name.startswith("Section ")
+        if group not in names:
+            names[group] = (
+                name
+                if existing and name and not automatic
+                else chr(65 + group)
+                if group < 26
+                else f"Section {group + 1}"
+            )
+        labels[measures[start].id] = names[group]
     return labels

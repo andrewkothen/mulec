@@ -1,5 +1,12 @@
 # Changelog
 
+## Compact arrangements — 2026-11-19
+
+- Form defaults to a compact arrangement: playback order above unique parts, exact pattern repeat counts, and separately identified variations or changed endings.
+- Recurring-part matching compares harmonic contours across phrases of different lengths and can regroup an existing section map.
+- Added group-name suggestions, a manual “Same part as” control, and compact PDF export while retaining the full playback timeline and engraved rhythm-chart views.
+- Verified persistence, merging, renaming and PDF download in the browser regression suite.
+
 ## Rhythm and number charts — 2026-11-16
 
 - Form now engraves chord changes above beat slashes, with a new staff line at named sections. The rhythm arrangement can be exported as MusicXML.

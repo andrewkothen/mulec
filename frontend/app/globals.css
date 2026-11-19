@@ -1700,3 +1700,101 @@ summary span {
     break-inside: avoid;
   }
 }
+.arrangement-count {
+  margin-bottom: 14px;
+}
+.arrangement-order {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  gap: 6px;
+  padding: 0;
+  margin: 0 0 24px;
+}
+.arrangement-order button {
+  background: transparent;
+  border: 1px solid #bac4b4;
+  border-radius: 3px;
+  padding: 7px 12px;
+  color: #223531;
+  font-weight: 600;
+}
+.arrangement-order small {
+  display: block;
+  margin-top: 3px;
+  font-size: 9px;
+  font-weight: 400;
+}
+.arrangement-order button[aria-current="step"] {
+  border-color: #c35436;
+  background: #fff0e8;
+}
+.arrangement-parts {
+  display: grid;
+  gap: 22px;
+}
+.arrangement-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px 15px;
+  margin-bottom: 9px;
+}
+.arrangement-heading h3 {
+  font-size: 19px;
+}
+.arrangement-heading span {
+  font-size: 10px;
+  color: #64705e;
+}
+.arrangement-block {
+  margin-bottom: 12px;
+}
+.pattern-repeat {
+  display: block;
+  font-weight: 600;
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+.arrangement-bars {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 0;
+}
+.arrangement-bar {
+  border-left: 1px solid #99a58f;
+  padding: 4px 9px 8px;
+  min-width: 0;
+}
+.arrangement-bar:last-child {
+  border-right: 1px solid #99a58f;
+}
+.arrangement-bar > small {
+  display: block;
+  color: #7e8c74;
+  font-size: 9px;
+  margin-bottom: 5px;
+}
+.arrangement-bar > span {
+  display: inline-block;
+  margin: 0 9px 4px 0;
+}
+.arrangement-bar strong {
+  font-family: Georgia, serif;
+  font-size: 19px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.arrangement-bar sup {
+  font-size: 8px;
+  padding-left: 3px;
+}
+.arrangement-bar em {
+  display: block;
+  font-size: 10px;
+}
+@media (max-width: 600px) {
+  .arrangement-bars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
