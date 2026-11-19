@@ -94,3 +94,65 @@ def test_rehearsal_length_pdf_fits_four_pages_and_embeds_the_chart_font():
         for font in page["/Resources"]["/Font"].get_object().values()
     ]
     assert any("MulecJazz" in font.get("/BaseFont", "") and "/FontDescriptor" in font for font in embedded)
+
+
+def test_condense_references_exact_phrases_across_names_but_keeps_changes():
+    phrase = ["Cmaj7", "Dm7", "Em7", "Fmaj7", "G7", "Am7", "Dm9", "G"]
+    symbols = phrase + ["Eb", "Ab", "Fm", "Bb7"] + phrase + ["D7", "G7"]
+    p = Project(
+        measures=[bar(s, i, {0: "A", 8: "Bridge", 12: "Verse"}.get(i, "")) for i, s in enumerate(symbols)]
+    )
+    original = p.model_dump()
+    full, short = arrangement(p), arrangement(p, condensed=True)
+    assert short["written_bars"] == full["written_bars"] - 8
+    verse = short["parts"][-1]
+    assert verse["blocks"][0]["reference"] == {"name": "A", "variant": 0, "first": 1, "length": 8}
+    assert [c["symbol"] for b in verse["blocks"][1]["bars"] for c in b["chords"]] == ["D7", "G7"]
+    assert p.model_dump() == original
+    p.measures[17].cue = "Stop here"
+    changed = arrangement(p, condensed=True)
+    assert any(
+        b["cue"] == "Stop here"
+        for part in changed["parts"]
+        for block in part["blocks"]
+        for b in block["bars"]
+    )
+    text = "\n".join(
+        page.extract_text() for page in PdfReader(BytesIO(arrangement_pdf(p, condensed=True))).pages
+    )
+    assert "Stop here" in text and "play A" in text
+
+
+def test_condense_keeps_repeat_counts_and_uses_direct_printed_references():
+    phrase = ["C", "Dm", "F", "G"]
+    p = Project(measures=[bar(s, i, {0: "A", 8: "B", 20: "C"}.get(i, "")) for i, s in enumerate(phrase * 9)])
+    plan = arrangement(p, condensed=True)
+    assert plan["written_bars"] == 4
+    assert plan["parts"][1]["blocks"][0]["times"] == 3
+    assert plan["parts"][2]["blocks"][0]["times"] == 4
+    assert all(
+        b["reference"]["name"] == "A" for part in plan["parts"] for b in part["blocks"] if "reference" in b
+    )
+    p.measures[8].meter = Meter(numerator=3)
+    different = arrangement(p, condensed=True)["parts"][1]["blocks"]
+    assert different[0]["bars"][0]["meter"]["numerator"] == 3
+
+
+def test_condensed_pdf_fits_rehearsal_length_in_two_pages_with_final_cue():
+    p = Project(
+        title="Condense print regression",
+        measures=[
+            Measure(
+                start=i * 2,
+                end=i * 2 + 2,
+                section=f"Part {i // 16 + 1}" if i % 16 == 0 else "",
+                chords=[Chord(symbol=["Cmaj7", "Dm7", "F", "G7"][i % 4], beat=(i % 16) / 8)],
+                cue="Final cue" if i == 159 else "",
+            )
+            for i in range(160)
+        ],
+    )
+    for paper in ("letter", "a4"):
+        doc = PdfReader(BytesIO(arrangement_pdf(p, paper, condensed=True)))
+        assert len(doc.pages) <= 2
+        assert "Final cue" in "".join(page.extract_text() for page in doc.pages)

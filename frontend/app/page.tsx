@@ -86,6 +86,7 @@ export default function Home() {
   const [chordStyle, setChordStyle] = useState("jazz");
   const [fullForm, setFullForm] = useState(false);
   const [compactForm, setCompactForm] = useState(true);
+  const [condensedForm, setCondensedForm] = useState(false);
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [findingForm, setFindingForm] = useState(false);
   const [time, setTime] = useState<number | null>(null),
@@ -195,6 +196,7 @@ export default function Home() {
     void refresh();
     setDark(localStorage.getItem("mulec-dark") === "true");
     setPaper(localStorage.getItem("mulec-paper") || "letter");
+    setCondensedForm(localStorage.getItem("mulec-condense") === "true");
   }, [refresh]);
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
@@ -429,12 +431,13 @@ export default function Home() {
           rhythm,
           firstBar: sectionExport ? activeSection.first + 1 : undefined,
           arrangement: arrangementExport,
+          condensed: arrangementExport && condensedForm,
         },
       );
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${project.title.replace(/[^a-zA-Z0-9 -]/g, "") || "Mulec"}-${part}${arrangementExport ? "-arrangement" : numbers ? "-numbers" : sectionExport ? `-bar-${activeSection.first + 1}` : rhythm ? "-form" : ""}.${format}`;
+      a.download = `${project.title.replace(/[^a-zA-Z0-9 -]/g, "") || "Mulec"}-${part}${arrangementExport ? (condensedForm ? "-condensed" : "-arrangement") : numbers ? "-numbers" : sectionExport ? `-bar-${activeSection.first + 1}` : rhythm ? "-form" : ""}.${format}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setShowExport(false);
@@ -1155,7 +1158,9 @@ export default function Home() {
                           id: "pdf",
                           label:
                             mode === "form" && compactForm
-                              ? "Compact arrangement · PDF"
+                              ? condensedForm
+                                ? "Condensed arrangement · PDF"
+                                : "Compact arrangement · PDF"
                               : chordStyle === "nashville"
                                 ? "Nashville number chart · PDF"
                                 : "Printable chord chart · PDF",
@@ -1511,6 +1516,14 @@ export default function Home() {
                     active={activeSection}
                     full={fullForm}
                     compact={compactForm}
+                    condensed={condensedForm}
+                    onCondense={() => {
+                      setCondensedForm(!condensedForm);
+                      localStorage.setItem(
+                        "mulec-condense",
+                        String(!condensedForm),
+                      );
+                    }}
                     finding={findingForm}
                     onFind={
                       canFindSections ? () => void findSections() : undefined
@@ -1589,6 +1602,7 @@ export default function Home() {
                     <Arrangement
                       project={project}
                       part={part}
+                      condensed={condensedForm}
                       active={activeSection}
                       onSelect={goToSection}
                     />

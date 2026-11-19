@@ -2,6 +2,74 @@ import { test, expect } from "@playwright/test";
 import path from "node:path";
 import fs from "node:fs/promises";
 
+test("Condense switches to a tight form overview, preserves source bars and exports its PDF", async ({
+  page,
+  request,
+}) => {
+  const phrase = ["C", "Am", "F", "G"];
+  const imported = await request.post("/api/projects/import", {
+    data: {
+      title: "Condense regression",
+      measures: Array.from({ length: 24 }, (_, i) => ({
+        start: i * 2,
+        end: i * 2 + 2,
+        section: i === 0 ? "A" : i === 8 ? "B" : i === 16 ? "F" : "",
+        chords: [{ symbol: i >= 8 && i < 16 ? "Dm7" : phrase[i % 4] }],
+      })),
+    },
+  });
+  const original = await imported.json();
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: /Condense regression/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Form", exact: true }).click();
+  const compact = page.getByLabel("Compact arrangement", { exact: true });
+  await expect(compact).toContainText("9 written bars");
+  const toggle = page.getByRole("button", { name: "Condense", exact: true });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(compact).toHaveClass(/is-condensed/);
+  await expect(compact).toContainText("5 written bars");
+  await expect(compact.locator(".arrangement-reference")).toContainText(
+    "play A",
+  );
+  await expect(compact.locator(".rhythm-staff").first()).toBeHidden();
+  await toggle.click();
+  await expect(compact).toContainText("9 written bars");
+  await expect(compact.locator(".rhythm-staff").first()).toBeVisible();
+  await toggle.click();
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const downloaded = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Condensed arrangement · PDF", exact: true })
+    .click();
+  await (await downloaded).saveAs("../tmp/condense/browser.pdf");
+  await page.reload();
+  await page
+    .getByRole("button", { name: /Condense regression/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Form", exact: true }).click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(compact).toContainText("5 written bars");
+  const saved = await (
+    await request.get(`/api/projects/${original.id}`)
+  ).json();
+  expect(saved.measures).toEqual(original.measures);
+  await page.screenshot({
+    path: "../tmp/condense/browser.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 850 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 2,
+    ),
+  ).toBeTruthy();
+});
+
 test("global multi-file drop queues songs, continues after a failed file, and accepts more files", async ({
   page,
   request,

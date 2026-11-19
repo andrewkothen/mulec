@@ -16,7 +16,7 @@ def _signature(measure: Measure):
     # Include rhythm, slash bass, cues and melody. Only redundant carry symbols collapse.
     changes = []
     for chord in sorted(measure.chords, key=lambda c: c.beat):
-        if not changes or changes[-1][1] != chord.symbol:
+        if not changes or changes[-1][1] != chord.symbol or chord.manual:
             changes.append((chord.beat, chord.symbol))
     return (
         measure.meter.numerator,
@@ -63,7 +63,80 @@ def blocks(measures: list[Measure], offset=0):
     return result
 
 
-def arrangement(project: Project):
+def _condense(parts, signatures):
+    """Reference exact earlier printed phrases; never reference another reference."""
+    phrases = {}
+
+    def eligible(bar):
+        return (
+            not bar["repeat_start"]
+            and not bar["repeat_end"]
+            and any(c["symbol"] not in {"?", "NC", "N.C."} for c in bar["chords"])
+            and all(c["symbol"] != "?" for c in bar["chords"])
+        )
+
+    for part in parts:
+        condensed = []
+        for block in part["blocks"]:
+            bars, start = block["bars"], 0
+            pending = []
+            pending_first = block["first"]
+            keys = [signatures[bar["id"]] for bar in bars]
+            while start < len(bars):
+                best = None
+                if start + 4 <= len(bars) and all(eligible(bar) for bar in bars[start : start + 4]):
+                    for source, source_block, offset in phrases.get(tuple(keys[start : start + 4]), []):
+                        source_bars = source_block["bars"]
+                        length = 4
+                        while start + length < len(bars) and offset + length < len(source_bars):
+                            target = bars[start + length]
+                            if (
+                                not eligible(target)
+                                or signatures[target["id"]] != signatures[source_bars[offset + length]["id"]]
+                            ):
+                                break
+                            length += 1
+                        # A repeated block stays a single unit unless all of it matches.
+                        if block["times"] > 1 and (start != 0 or length != len(bars)):
+                            continue
+                        if best is None or length > best[0]:
+                            best = (length, source, source_block, offset)
+                if best:
+                    if pending:
+                        condensed.append({"first": pending_first, "times": 1, "bars": pending})
+                        pending = []
+                    length, source, source_block, offset = best
+                    condensed.append(
+                        {
+                            "first": block["first"] + start,
+                            "times": block["times"],
+                            "bars": [],
+                            "reference": {
+                                "name": source["name"],
+                                "variant": source["variant"],
+                                "first": source_block["first"] + offset,
+                                "length": length,
+                            },
+                        }
+                    )
+                    start += length
+                    pending_first = block["first"] + start
+                else:
+                    pending.append(bars[start])
+                    start += 1
+            if pending:
+                condensed.append({"first": pending_first, "times": block["times"], "bars": pending})
+        part["blocks"] = condensed
+        for block in condensed:
+            bars = block["bars"]
+            for offset in range(len(bars) - 3):
+                chunk = bars[offset : offset + 4]
+                if all(eligible(bar) for bar in chunk):
+                    key = tuple(signatures[bar["id"]] for bar in chunk)
+                    phrases.setdefault(key, []).append((part, block, offset))
+
+
+def arrangement(project: Project, *, condensed=False):
     parts, order = [], []
     groups = {}
     for occurrence in sections(project):
@@ -105,6 +178,8 @@ def arrangement(project: Project):
                 "duration": bars[-1].end - bars[0].start,
             }
         )
+    if condensed:
+        _condense(parts, {bar.id: _signature(bar) for bar in project.measures})
     for part in parts:
         del part["_signature"]
         for block in part["blocks"]:
@@ -113,4 +188,10 @@ def arrangement(project: Project):
                 for chord in bar["chords"]:
                     chord["display"] = jazz_symbol(chord["symbol"])
     written = sum(len(block["bars"]) for part in parts for block in part["blocks"])
-    return {"parts": parts, "order": order, "written_bars": written, "total_bars": len(project.measures)}
+    return {
+        "parts": parts,
+        "order": order,
+        "written_bars": written,
+        "total_bars": len(project.measures),
+        "condensed": condensed,
+    }

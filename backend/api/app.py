@@ -284,12 +284,12 @@ def create_app(data_dir: Path | None = None):
             slots.release()
 
     @app.post("/api/arrangement")
-    def compact_arrangement(body: Project, part: str = "concert"):
+    def compact_arrangement(body: Project, part: str = "concert", condensed: bool = False):
         validate_music(body)
         if part not in ("concert", "bb", "eb"):
             raise HTTPException(422, "Unsupported instrument part")
         shift = {"concert": 0, "bb": 2, "eb": 9}[part]
-        return make_arrangement(transpose_project(body, shift) if shift else body)
+        return make_arrangement(transpose_project(body, shift) if shift else body, condensed=condensed)
 
     @app.post("/api/export/{format}")
     def export_project(
@@ -300,6 +300,7 @@ def create_app(data_dir: Path | None = None):
         nashville: bool = False,
         rhythm: bool = False,
         arrangement: bool = False,
+        condensed: bool = False,
         first_bar: int = Query(1, ge=1, le=2000),
     ):
         validate_music(body)
@@ -314,7 +315,7 @@ def create_app(data_dir: Path | None = None):
             )
         elif format == "pdf":
             content, mime = (
-                export.arrangement_pdf(project, paper)
+                export.arrangement_pdf(project, paper, condensed=condensed)
                 if arrangement
                 else export.pdf(
                     project,

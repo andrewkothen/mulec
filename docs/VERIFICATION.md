@@ -1,5 +1,11 @@
 # Verification — Mulec 0.1.0
 
+## Condense overview milestone (2026-11-19)
+
+Local checks passed: 83 Python tests, 3 TypeScript tests, Ruff, frontend build/type checking, and all 5 browser acceptance scenarios. Condense is a reversible view preference, separate from the saved project. The browser regression verifies switching both directions, exact phrase references, hidden staff lines, persisted preference, matching PDF download, mobile overflow, and unchanged source measures.
+
+New arrangement regressions cover cross-name phrase references, retained changed chords/cues/meter, repeat counts, and direct references to physically printed music rather than reference chains. A 160-bar print fixture fits two pages on Letter and A4 with its final cue intact. All nine newly uploaded local songs render on 1–2 pages; the longest 163-bar chart renders on two. Representative pages were rendered and visually checked. These are layout and data-preservation checks, not harmony-accuracy claims.
+
 ## Bulk upload milestone (2026-11-19)
 
 The browser suite now has four passing scenarios. The new real-audio scenario drops multiple files globally from Library, rejects a text file without losing accepted audio, processes valid recordings around a corrupt WAV, appends another recording while the queue is active, verifies all three completed charts are saved, and clears finished queue rows. Multi-selection, duplicate/size/format filtering, production build/type checking, and three TypeScript tests also pass. Other chart acceptance scenarios remain green. Backend analysis logic is unchanged.

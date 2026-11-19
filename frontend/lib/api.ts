@@ -36,12 +36,14 @@ export async function exportBlob(
     rhythm?: boolean;
     firstBar?: number;
     arrangement?: boolean;
+    condensed?: boolean;
   } = {},
 ) {
   const query = new URLSearchParams({ paper, part });
   if (style.nashville) query.set("nashville", "true");
   if (style.rhythm) query.set("rhythm", "true");
   if (style.arrangement) query.set("arrangement", "true");
+  if (style.condensed) query.set("condensed", "true");
   if (style.firstBar && style.firstBar > 1)
     query.set("first_bar", String(style.firstBar));
   const response = await fetch(`/api/export/${format}?${query}`, json(project));

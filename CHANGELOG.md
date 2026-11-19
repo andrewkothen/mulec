@@ -1,5 +1,12 @@
 # Changelog
 
+## Condense form overview — 2026-11-19
+
+- Added a persistent Condense toggle in Form → Arrangement, with matching PDF export.
+- Condensed charts use full-width, tightly spaced chord bars without staff lines, preserving handwritten jazz typography and the arrangement roadmap.
+- Exact earlier phrases can be referenced across section names. References point directly to printed music; altered chords, cues, meter, manual rearticulations and endings remain distinct.
+- All nine current local songs fit 1–2 pages in the condensed PDF layout, which retains music if an exceptional score exceeds the target.
+
 ## Bulk recording imports — 2026-11-19
 
 - Added multi-file selection and a global audio drag-and-drop target from any view.

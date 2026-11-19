@@ -9,6 +9,8 @@ export default function SongForm({
   active,
   full,
   compact,
+  condensed,
+  onCondense,
   finding,
   onFind,
   onSelect,
@@ -21,6 +23,8 @@ export default function SongForm({
   active: SongSection;
   full: boolean;
   compact: boolean;
+  condensed: boolean;
+  onCondense: () => void;
   finding: boolean;
   onFind?: () => void;
   onSelect: (section: SongSection) => void;
@@ -60,6 +64,15 @@ export default function SongForm({
             Full chart
           </button>
         </div>
+        {compact && (
+          <button
+            className={condensed ? "primary" : "secondary"}
+            aria-pressed={condensed}
+            onClick={onCondense}
+          >
+            Condense
+          </button>
+        )}
         {onFind && (
           <button className="secondary" disabled={finding} onClick={onFind}>
             {finding

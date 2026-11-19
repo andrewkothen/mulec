@@ -199,7 +199,10 @@ def pdf(project: Project, paper="letter", part_label="Concert pitch", *, nashvil
     return output.getvalue()
 
 
-def arrangement_pdf(project: Project, paper="letter") -> bytes:
-    from backend.music.rhythm_pdf import render
+def arrangement_pdf(project: Project, paper="letter", *, condensed=False) -> bytes:
+    if condensed:
+        from backend.music.condensed_pdf import render
+    else:
+        from backend.music.rhythm_pdf import render
 
     return render(project, paper)
