@@ -1,5 +1,11 @@
 # Verification — Mulec 0.1.0
 
+## Bulk upload milestone (2026-11-19)
+
+The browser suite now has four passing scenarios. The new real-audio scenario drops multiple files globally from Library, rejects a text file without losing accepted audio, processes valid recordings around a corrupt WAV, appends another recording while the queue is active, verifies all three completed charts are saved, and clears finished queue rows. Multi-selection, duplicate/size/format filtering, production build/type checking, and three TypeScript tests also pass. Other chart acceptance scenarios remain green. Backend analysis logic is unchanged.
+
+The requested fresh library reset moved the previous 12 projects and 10 audio files to an ignored local backup before creating a new empty database. The production browser was refreshed and left on the multiple-recording import form.
+
 ## Handwritten rhythm-chart print milestone (2026-11-19)
 
 The reference PDF was inspected visually and its embedded font names identified as Inkpen2. Mulec now bundles an OFL-licensed MuseJazz-derived TrueType font, including provenance and conversion script, for a similar handwritten style across browser and PDF. Exact Inkpen2 typography is not claimed.

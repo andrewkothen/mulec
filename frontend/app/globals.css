@@ -555,6 +555,105 @@ main {
   gap: 6px;
   margin-bottom: 26px;
 }
+.global-file-drop {
+  position: fixed;
+  inset: 12px;
+  z-index: 1000;
+  border: 3px dashed var(--accent, #30604b);
+  border-radius: 16px;
+  background: #f1f6eef5;
+  color: #224b39;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  pointer-events: none;
+}
+.global-file-drop strong {
+  font-size: 24px;
+}
+.selected-recordings {
+  list-style: none;
+  margin: -10px 0 22px;
+  padding: 0;
+  max-height: 250px;
+  overflow-y: auto;
+}
+.selected-recordings li,
+.upload-queue li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.selected-recordings li > span {
+  flex: 1;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.selected-recordings small {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.upload-queue {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin: 18px 30px;
+}
+.upload-queue summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.upload-queue summary span {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 400;
+}
+.upload-queue ol {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.queue-description {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+.queue-description > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.queue-description progress {
+  width: min(100%, 350px);
+  height: 8px;
+  accent-color: #30604b;
+}
+.upload-queue li[data-status="error"] .queue-description > span {
+  color: #a63426;
+}
+.upload-queue li > button {
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .upload-queue {
+    margin: 12px;
+    padding: 14px;
+  }
+  .upload-queue li {
+    flex-wrap: wrap;
+  }
+  .queue-description {
+    flex-basis: 100%;
+  }
+}
 .upload-icon {
   width: 48px;
   height: 48px;

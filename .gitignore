@@ -9,6 +9,7 @@ node_modules/
 out/
 *.tsbuildinfo
 data/
+local-backups/
 tmp/
 output/
 .env*

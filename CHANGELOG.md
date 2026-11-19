@@ -1,5 +1,11 @@
 # Changelog
 
+## Bulk recording imports — 2026-11-19
+
+- Added multi-file selection and a global audio drag-and-drop target from any view.
+- Added a sequential import queue with per-recording progress, failure isolation, retry, removal of waiting files, and links to completed charts.
+- Additional recordings can join a running queue; settings are captured per submission and existing editor changes are preserved.
+
 ## Handwritten rehearsal style — 2026-11-19
 
 - Styled compact arrangements after the supplied reference: rhythm staves/slashes, repeat barlines/counts, short jazz chord symbols and a centered title.

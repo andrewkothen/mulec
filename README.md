@@ -37,7 +37,7 @@ Once installed and built, the application runs offline. There are no hosted AI c
 
 ## The working workflow
 
-1. **New transcription:** import WAV, FLAC, MP3, M4A, OGG or AIFF. The limit is 150 MB / 15 minutes. Optionally specify a time region, tempo override and meter. YouTube/Bandcamp links are stored as references; supply an authorized local file for analysis.
+1. **New transcription:** select multiple WAV, FLAC, MP3, M4A, OGG or AIFF files, or drop them anywhere in Mulec. The limit is 150 MB / 15 minutes per recording. Batch chart titles come from filenames; composer and analysis options apply to the selected batch. YouTube/Bandcamp links are stored as single-song references; supply an authorized local file for analysis.
 2. **Analyze:** local decoding, beat tracking, key estimation and chord recognition produce a measure-based chart. The progress indicator reports real processing stages.
 3. **Review:** listen with the waveform, change playback speed, loop a region and select a bar to seek to it. Amber markers identify uncertain chord estimates.
 4. **Edit:** change chord symbols and beat positions, add/remove changes, edit section labels and cues, add/delete/split bars, add melody notes, correct bar timing, or apply a uniform tempo/meter grid. Undo/redo retains up to 80 edits. Chord syntax includes `Cmaj7`, `Dm7`, `G7b9`, `Fm7b5`, `Bb/F` and `N.C.`.
@@ -45,6 +45,8 @@ Once installed and built, the application runs offline. There are no hosted AI c
 6. **Export:** PDF chord charts on Letter/A4; MusicXML with melody/rests/harmony/repeats; MIDI when melody exists; JSON for notation backup. Exports use current edits, even before saving. Concert, B-flat (+2 semitones), and E-flat (+9 semitones) views/exports are available. The editor always edits concert pitches; transposed parts are derived views.
 
 The **Try an original demo** action synthesizes original CC0 audio, then sends it through exactly the same analysis pipeline as an upload. It does not inject predetermined chord results.
+
+The import queue uploads and analyzes one song at a time, shows per-song progress, and continues after a failed recording. Add further files while it runs, remove waiting songs, retry failures, or open completed charts from the queue or Library. Keep the window open until it finishes: files still waiting to upload are held by the browser and are not restored after a reload. Completed charts are saved locally as usual. Queuing imports preserves current editor changes.
 
 **Form → Arrangement** is the rehearsal print view: handwritten jazz typography, rhythm slashes, repeat barlines/counts, compact chord symbols (△ major, - minor, ø half-diminished), and an arrangement roadmap. Browser and PDF use the same bundled MuseJazz-derived font. PDF layout targets four pages or fewer, with adaptive spacing and chord text kept at least 12 points; exceptionally long or dense charts can exceed that target rather than omit music. Short charts may fit one page. The font is an open-source alternative to the supplied reference's Inkpen2 typefaces, not an exact replacement.
 

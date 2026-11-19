@@ -2,6 +2,111 @@ import { test, expect } from "@playwright/test";
 import path from "node:path";
 import fs from "node:fs/promises";
 
+test("global multi-file drop queues songs, continues after a failed file, and accepts more files", async ({
+  page,
+  request,
+}) => {
+  const fixture = (
+    await fs.readFile(path.resolve("../tmp/sunday-sketch.wav"))
+  ).toString("base64");
+  const prefix = `Batch ${Date.now()}`;
+  await page.goto("/");
+  await page.evaluate(
+    ({ fixture, prefix }) => {
+      const transfer = new DataTransfer();
+      const bytes = Uint8Array.from(atob(fixture), (c) => c.charCodeAt(0));
+      transfer.items.add(
+        new File([bytes], `${prefix} one.wav`, {
+          type: "audio/wav",
+          lastModified: 42,
+        }),
+      );
+      transfer.items.add(
+        new File(["not an audio recording"], `${prefix} broken.wav`, {
+          type: "audio/wav",
+        }),
+      );
+      transfer.items.add(
+        new File([bytes], `${prefix} two.wav`, {
+          type: "audio/wav",
+          lastModified: 42,
+        }),
+      );
+      transfer.items.add(
+        new File(["notes"], "notes.txt", { type: "text/plain" }),
+      );
+      document.body.dispatchEvent(
+        new DragEvent("dragenter", { bubbles: true, dataTransfer: transfer }),
+      );
+      document.body.dispatchEvent(
+        new DragEvent("drop", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: transfer,
+        }),
+      );
+    },
+    { fixture, prefix },
+  );
+  await expect(
+    page.getByRole("heading", { name: "Start with a recording." }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("list", { name: "Selected recordings" })
+      .getByRole("listitem"),
+  ).toHaveCount(3);
+  await expect(page.locator(".alert.error")).toContainText("notes.txt");
+  await expect(page.getByLabel("Audio recording")).toHaveAttribute(
+    "multiple",
+    "",
+  );
+  await page.locator("summary").filter({ hasText: "Analysis options" }).click();
+  await page
+    .getByRole("combobox", { name: "Known key", exact: true })
+    .selectOption("C");
+  await page
+    .getByRole("spinbutton", { name: "Tempo override (BPM)" })
+    .fill("120");
+  await page
+    .getByRole("button", { name: "Analyze 3 recordings", exact: true })
+    .click();
+  const queue = page.getByRole("list", { name: "Import queue" });
+  await expect(queue.getByRole("listitem")).toHaveCount(3);
+  // Add another file while the earlier batch is still working.
+  await page.getByLabel("Audio recording").setInputFiles({
+    name: `${prefix} three.wav`,
+    mimeType: "audio/wav",
+    buffer: Buffer.from(fixture, "base64"),
+  });
+  await page.getByRole("button", { name: "Add to queue", exact: true }).click();
+  await expect(queue.getByRole("listitem")).toHaveCount(4);
+  await expect(queue.locator('[data-status="done"]')).toHaveCount(3, {
+    timeout: 120000,
+  });
+  await expect(queue.locator('[data-status="error"]')).toHaveCount(1);
+  await expect(
+    queue.locator(
+      '[data-status="waiting"], [data-status="running"], [data-status="uploading"]',
+    ),
+  ).toHaveCount(0);
+  const summaries = await (await request.get("/api/projects")).json();
+  expect(
+    summaries.filter((item: { title: string }) =>
+      item.title.startsWith(prefix),
+    ),
+  ).toHaveLength(3);
+  await page.getByRole("button", { name: /^Library/ }).click();
+  await expect(
+    page.getByRole("button", { name: new RegExp(`${prefix} two`) }),
+  ).toBeVisible();
+  await page.screenshot({ path: "../tmp/batch-upload.png", fullPage: false });
+  await page
+    .getByRole("button", { name: "Clear finished", exact: true })
+    .click();
+  await expect(queue.getByRole("listitem")).toHaveCount(1);
+});
+
 test("theoretical minor keys render and a manual E key survives reload", async ({
   page,
   request,

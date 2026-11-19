@@ -37,6 +37,9 @@ import Player from "@/components/Player";
 import Notation from "@/components/Notation";
 import SongForm from "@/components/SongForm";
 import Arrangement from "@/components/Arrangement";
+import UploadQueue from "@/components/UploadQueue";
+import { useUploadQueue } from "@/lib/useUploadQueue";
+import { AUDIO_ACCEPT, fileKey, selectAudioFiles } from "@/lib/uploads";
 import MeasureEditor, { TextField } from "@/components/MeasureEditor";
 import { songSections, type SongSection } from "@/lib/form";
 import { nashvilleChord, nashvilleReference } from "@/lib/nashville";
@@ -92,10 +95,15 @@ export default function Home() {
     [showExport, setShowExport] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null),
     jsonInput = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null),
+  const [files, setFiles] = useState<File[]>([]),
     [title, setTitle] = useState(""),
     [composer, setComposer] = useState(""),
     [reference, setReference] = useState("");
+  const file = files[0] ?? null;
+  const [draggingFiles, setDraggingFiles] = useState(false);
+  const receiveFiles = useRef<(incoming: File[]) => void>(() => {});
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
   const [regionStart, setRegionStart] = useState("0"),
     [regionEnd, setRegionEnd] = useState(""),
     [tempo, setTempo] = useState(""),
@@ -118,6 +126,71 @@ export default function Home() {
         .catch((e) => setError(e.message)),
     [],
   );
+  const uploads = useUploadQueue(async (task) => {
+    await refresh();
+    if (
+      task.autoOpen &&
+      !dirtyRef.current &&
+      tabRef.current === "new" &&
+      task.projectId
+    ) {
+      try {
+        const completed = await api<Project>(`/projects/${task.projectId}`);
+        if (!dirtyRef.current && tabRef.current === "new") adopt(completed);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    }
+  });
+  receiveFiles.current = (incoming) => {
+    const selected = selectAudioFiles([], incoming);
+    setError(selected.rejected.join("; "));
+    setFiles((current) => selectAudioFiles(current, selected.files).files);
+    setTab("new");
+  };
+  useEffect(() => {
+    let depth = 0;
+    const hasFiles = (e: DragEvent) =>
+      Array.from(e.dataTransfer?.types ?? []).includes("Files");
+    const enter = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth++;
+      setDraggingFiles(true);
+    };
+    const over = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    };
+    const leave = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      depth = Math.max(0, depth - 1);
+      if (!depth) setDraggingFiles(false);
+    };
+    const reset = () => {
+      depth = 0;
+      setDraggingFiles(false);
+    };
+    const drop = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      reset();
+      receiveFiles.current(Array.from(e.dataTransfer?.files ?? []));
+    };
+    window.addEventListener("dragenter", enter);
+    window.addEventListener("dragover", over);
+    window.addEventListener("dragleave", leave);
+    window.addEventListener("drop", drop);
+    window.addEventListener("dragend", reset);
+    return () => {
+      window.removeEventListener("dragenter", enter);
+      window.removeEventListener("dragover", over);
+      window.removeEventListener("dragleave", leave);
+      window.removeEventListener("drop", drop);
+      window.removeEventListener("dragend", reset);
+    };
+  }, []);
   useEffect(() => {
     void refresh();
     setDark(localStorage.getItem("mulec-dark") === "true");
@@ -128,13 +201,13 @@ export default function Home() {
   }, [dark]);
   useEffect(() => {
     const f = (e: BeforeUnloadEvent) => {
-      if (dirty) {
+      if (dirty || uploads.active || files.length > 0) {
         e.preventDefault();
       }
     };
     window.addEventListener("beforeunload", f);
     return () => window.removeEventListener("beforeunload", f);
-  }, [dirty]);
+  }, [dirty, uploads.active, files.length]);
   useEffect(() => {
     if (project) {
       setGridBpm(String(project.bpm));
@@ -303,39 +376,36 @@ export default function Home() {
   }
   async function analyze(e: React.FormEvent) {
     e.preventDefault();
-    if (!file) return;
-    if (
-      dirty &&
-      !window.confirm("Start a new transcription and discard unsaved edits?")
-    )
-      return;
-    setDirty(false);
-    setBusy(true);
+    if (!files.length || busy) return;
     setError("");
     const [numerator, denominator] = meter.split("/").map(Number);
-    const form = new FormData();
-    form.append("file", file);
-    form.append("title", title || file.name.replace(/\.[^.]+$/, ""));
-    form.append("composer", composer);
-    form.append("reference", reference);
-    form.append(
-      "options",
-      JSON.stringify({
-        start: Number(regionStart),
-        end: regionEnd ? Number(regionEnd) : null,
-        bpm: tempo ? Number(tempo) : null,
-        key: knownKey || null,
-        key_mode: knownMode,
-        meter: { numerator, denominator },
-        melody,
-        sensitivity: Number(sensitivity),
-      }),
+    const options = JSON.stringify({
+      start: Number(regionStart),
+      end: regionEnd ? Number(regionEnd) : null,
+      bpm: tempo ? Number(tempo) : null,
+      key: knownKey || null,
+      key_mode: knownMode,
+      meter: { numerator, denominator },
+      melody,
+      sensitivity: Number(sensitivity),
+    });
+    uploads.enqueue(
+      files.map((file) => ({
+        name: file.name,
+        file,
+        title:
+          files.length === 1 && title
+            ? title
+            : file.name.replace(/\.[^.]+$/, "").slice(0, 160),
+        composer,
+        reference: files.length === 1 ? reference : "",
+        options,
+        autoOpen: files.length === 1,
+      })),
     );
-    try {
-      setJob(await api<Job>("/analyze", { method: "POST", body: form }));
-    } catch (e) {
-      handleError(e);
-    }
+    setFiles([]);
+    setTitle("");
+    setReference("");
   }
   async function download(format: string) {
     if (!project) return;
@@ -537,6 +607,13 @@ export default function Home() {
     ) || 0;
   return (
     <div className="app-shell">
+      {draggingFiles && (
+        <div className="global-file-drop" role="status">
+          <Upload size={40} />
+          <strong>Drop your recordings to import</strong>
+          <span>Add one song or a whole selection</span>
+        </div>
+      )}
       <aside className="sidebar">
         <a
           href="#"
@@ -625,6 +702,13 @@ export default function Home() {
             </button>
           </div>
         )}
+        <UploadQueue
+          items={uploads.items}
+          onOpen={(id) => void open(id)}
+          onRetry={uploads.retry}
+          onRemove={uploads.remove}
+          onClear={uploads.clearFinished}
+        />
         {tab === "library" && (
           <div className="page library-page">
             <div className="page-title">
@@ -650,7 +734,7 @@ export default function Home() {
                 <button
                   className="secondary"
                   onClick={() => void demo()}
-                  disabled={busy}
+                  disabled={busy || uploads.active}
                 >
                   Try an original demo <ArrowUpRight size={16} />
                 </button>
@@ -748,7 +832,10 @@ export default function Home() {
               <div>
                 <div className="eyebrow">01 / BRING YOUR MUSIC</div>
                 <h1>Start with a recording.</h1>
-                <p>Your audio is analyzed right here on your computer.</p>
+                <p>
+                  Drop one or more recordings anywhere in Mulec. Audio stays on
+                  your computer.
+                </p>
               </div>
             </div>
             {job && job.status !== "error" ? (
@@ -770,50 +857,85 @@ export default function Home() {
                   type="button"
                   className="dropzone"
                   onClick={() => fileInput.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const f = e.dataTransfer.files[0];
-                    if (f) {
-                      setFile(f);
-                      if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
-                    }
-                  }}
                 >
                   <span className="upload-icon">
                     <Upload size={25} />
                   </span>
-                  <strong>{file ? file.name : "Drop a recording here"}</strong>
+                  <strong>
+                    {files.length > 1
+                      ? `${files.length} recordings selected`
+                      : file
+                        ? file.name
+                        : "Drop recordings here"}
+                  </strong>
                   <span>
                     {file
-                      ? `${(file.size / 1024 / 1024).toFixed(1)} MB · Click to choose a different file`
-                      : "or click to browse your files"}
+                      ? `${(files.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024).toFixed(1)} MB total · Click to add more`
+                      : "or click to select multiple files"}
                   </span>
                   <small>
                     WAV, MP3, FLAC, M4A, OGG, AIFF · up to 150 MB / 15 minutes
+                    per song
                   </small>
                 </button>
                 <input
                   ref={fileInput}
                   type="file"
-                  accept=".wav,.mp3,.flac,.m4a,.ogg,.aiff,.aif"
+                  accept={AUDIO_ACCEPT}
+                  multiple
                   className="sr-only"
                   aria-label="Audio recording"
                   onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) {
-                      setFile(f);
-                      if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
-                    }
+                    receiveFiles.current(Array.from(e.target.files ?? []));
+                    e.target.value = "";
                   }}
                 />
+                {files.length > 0 && (
+                  <ul
+                    className="selected-recordings"
+                    aria-label="Selected recordings"
+                  >
+                    {files.map((f) => (
+                      <li key={fileKey(f)}>
+                        <span>{f.name}</span>
+                        <small>{(f.size / 1024 / 1024).toFixed(1)} MB</small>
+                        <button
+                          type="button"
+                          className="text-button"
+                          aria-label={`Remove ${f.name} from selection`}
+                          onClick={() =>
+                            setFiles((current) =>
+                              current.filter(
+                                (item) => fileKey(item) !== fileKey(f),
+                              ),
+                            )
+                          }
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {files.length > 1 && (
+                  <p className="hint">
+                    Each song uses its filename as its title. Composer and
+                    analysis options below apply to every selected song.
+                  </p>
+                )}
                 <div className="field-pair">
                   <label>
                     Song title
                     <input
                       value={title}
+                      disabled={files.length > 1}
                       maxLength={160}
-                      placeholder="An idea worth playing"
+                      placeholder={
+                        files.length > 1
+                          ? "Titles come from filenames"
+                          : file?.name.replace(/\.[^.]+$/, "") ||
+                            "An idea worth playing"
+                      }
                       onChange={(e) => setTitle(e.target.value)}
                     />
                   </label>
@@ -831,6 +953,7 @@ export default function Home() {
                   YouTube or Bandcamp reference <span>optional</span>
                   <input
                     type="url"
+                    disabled={files.length > 1}
                     value={reference}
                     onChange={(e) => setReference(e.target.value)}
                     placeholder="https://…"
@@ -963,7 +1086,11 @@ export default function Home() {
                     ) : (
                       <Music2 size={17} />
                     )}{" "}
-                    Analyze recording
+                    {files.length > 1
+                      ? `Analyze ${files.length} recordings`
+                      : uploads.active
+                        ? "Add to queue"
+                        : "Analyze recording"}
                   </button>
                 </div>
               </form>
