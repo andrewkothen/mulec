@@ -1,5 +1,11 @@
 # Verification — Mulec 0.1.0
 
+## Arrangement readability (2026-11-20)
+
+Passed 84 Python tests, 3 TypeScript tests, all 6 browser scenarios, Ruff, and the production build/type check. The new browser scenario verifies aligned staves beside long cues, additional width for dense harmony, lone offbeat chord labels, and no page or harmony overflow at 1440, 900 and 390 pixels. Desktop and mobile screenshots were visually inspected.
+
+The condensed PDF regression verifies repeated section headings on continuation pages, retained final cues, and lone offbeat entrances on Letter and A4. All nine current local charts were regenerated: eight remain two pages and the longest chart remains three. All three the longest chart pages and a continuation fixture were visually checked. These are layout checks, not a transcription-accuracy benchmark.
+
 ## Condense spacing correction (2026-11-19)
 
 Condense now retains musical staves and rhythm slashes in browser and PDF, with shorter measures instead of a staff-free shorthand layout. Browser acceptance verifies that staves stay visible and measures are narrower than the regular arrangement. The chord font size is retained, with responsive six/four/two-column layouts. PDF pages were visually inspected; current songs fit two pages except the longest 163-bar chart, which needs three to retain readable musical bars. The earlier all-songs/two-page result below describes the superseded staff-free layout.

@@ -1,5 +1,12 @@
 # Changelog
 
+## Arrangement readability — 2026-11-20
+
+- Aligned neighboring staves even when chords wrap or a bar has a long rehearsal cue; barlines now stay attached to the staff.
+- Gave dense condensed bars extra width while retaining the chord font size and short simple bars.
+- Preserved beat labels for lone chords entering after beat one in the browser and condensed PDF.
+- Repeated section headings when condensed PDF sections continue onto another page.
+
 ## Shorter musical measures — 2026-11-19
 
 - Corrected Condense to retain five-line staves and rhythm slashes, shortening measure widths instead of removing musical notation.

@@ -156,7 +156,7 @@ export default function Arrangement({
                       ]
                     : block.bars.map((bar, i) => (
                         <div
-                          className={`arrangement-bar${(i === 0 && block.times > 1) || bar.repeat_start ? " repeat-begin" : ""}${(i === block.bars.length - 1 && block.times > 1) || bar.repeat_end ? " repeat-finish" : ""}`}
+                          className={`arrangement-bar${bar.chords.length > 2 || bar.chords.reduce((length, chord) => length + chord.display.length, 0) > 20 ? " is-dense" : ""}${(i === 0 && block.times > 1) || bar.repeat_start ? " repeat-begin" : ""}${(i === block.bars.length - 1 && block.times > 1) || bar.repeat_end ? " repeat-finish" : ""}`}
                           key={bar.id}
                         >
                           <small>{block.first + i}</small>
@@ -169,7 +169,8 @@ export default function Arrangement({
                                   aria-label={chord.symbol}
                                 >
                                   <strong>{chord.display}</strong>
-                                  {bar.chords.length > 1 && (
+                                  {(bar.chords.length > 1 ||
+                                    chord.beat > 0) && (
                                     <sup>
                                       {beatLabel(
                                         chord.beat,
@@ -183,55 +184,59 @@ export default function Arrangement({
                               <span>—</span>
                             )}
                           </div>
-                          <svg
-                            className="rhythm-staff"
-                            viewBox="0 0 140 30"
-                            preserveAspectRatio="none"
-                            aria-hidden="true"
-                          >
-                            {[5, 10, 15, 20, 25].map((y) => (
-                              <line key={y} x1="0" y1={y} x2="140" y2={y} />
-                            ))}
-                            {((i === 0 && block.times > 1) ||
-                              bar.repeat_start) && (
-                              <>
-                                <circle cx="7" cy="12.5" r="1" />
-                                <circle cx="7" cy="17.5" r="1" />
-                              </>
+                          <div className="bar-staff">
+                            <svg
+                              className="rhythm-staff"
+                              viewBox="0 0 140 30"
+                              preserveAspectRatio="none"
+                              aria-hidden="true"
+                            >
+                              {[5, 10, 15, 20, 25].map((y) => (
+                                <line key={y} x1="0" y1={y} x2="140" y2={y} />
+                              ))}
+                              {((i === 0 && block.times > 1) ||
+                                bar.repeat_start) && (
+                                <>
+                                  <circle cx="7" cy="12.5" r="1" />
+                                  <circle cx="7" cy="17.5" r="1" />
+                                </>
+                              )}
+                              {((i === block.bars.length - 1 &&
+                                block.times > 1) ||
+                                bar.repeat_end) && (
+                                <>
+                                  <circle cx="133" cy="12.5" r="1" />
+                                  <circle cx="133" cy="17.5" r="1" />
+                                </>
+                              )}
+                              {Array.from(
+                                { length: bar.meter.numerator },
+                                (_, beat) => {
+                                  const x =
+                                    8 +
+                                    (124 * (beat + 0.5)) / bar.meter.numerator;
+                                  return (
+                                    <path
+                                      key={beat}
+                                      d={`M ${x - 3} 21 L ${x + 4} 10 L ${x + 4} 14 L ${x - 3} 25 Z`}
+                                    />
+                                  );
+                                },
+                              )}
+                            </svg>
+                          </div>
+                          <div className="bar-annotations">
+                            {bar.cue && <em>{bar.cue}</em>}
+                            {(allBars.indexOf(bar) === 0 ||
+                              allBars[allBars.indexOf(bar) - 1].meter
+                                .numerator !== bar.meter.numerator ||
+                              allBars[allBars.indexOf(bar) - 1].meter
+                                .denominator !== bar.meter.denominator) && (
+                              <span className="bar-meter">
+                                {bar.meter.numerator}/{bar.meter.denominator}
+                              </span>
                             )}
-                            {((i === block.bars.length - 1 &&
-                              block.times > 1) ||
-                              bar.repeat_end) && (
-                              <>
-                                <circle cx="133" cy="12.5" r="1" />
-                                <circle cx="133" cy="17.5" r="1" />
-                              </>
-                            )}
-                            {Array.from(
-                              { length: bar.meter.numerator },
-                              (_, beat) => {
-                                const x =
-                                  8 +
-                                  (124 * (beat + 0.5)) / bar.meter.numerator;
-                                return (
-                                  <path
-                                    key={beat}
-                                    d={`M ${x - 3} 21 L ${x + 4} 10 L ${x + 4} 14 L ${x - 3} 25 Z`}
-                                  />
-                                );
-                              },
-                            )}
-                          </svg>
-                          {(allBars.indexOf(bar) === 0 ||
-                            allBars[allBars.indexOf(bar) - 1].meter
-                              .numerator !== bar.meter.numerator ||
-                            allBars[allBars.indexOf(bar) - 1].meter
-                              .denominator !== bar.meter.denominator) && (
-                            <span className="bar-meter">
-                              {bar.meter.numerator}/{bar.meter.denominator}
-                            </span>
-                          )}
-                          {bar.cue && <em>{bar.cue}</em>}
+                          </div>
                           {i === 0 && block.times > 1 && (
                             <em className="pattern-repeat">
                               <span className={condensed ? "sr-only" : ""}>

@@ -6,7 +6,7 @@ from xml.sax.saxutils import escape
 from reportlab.lib.pagesizes import A4, letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase.pdfmetrics import stringWidth
-from reportlab.platypus import BaseDocTemplate, Flowable, Frame, KeepTogether, PageTemplate, Paragraph, Spacer
+from reportlab.platypus import BaseDocTemplate, Flowable, Frame, PageTemplate, Paragraph, Spacer, Table
 
 from backend.music.arrangement import arrangement
 from backend.music.chart_style import beat_label, chart_font, chord_changes, jazz_symbol
@@ -71,7 +71,7 @@ class ChordRow(Flowable):
                 escape(jazz_symbol(event["symbol"]))
                 + (
                     f"<super><font size='7'>{escape(beat_label(event['beat'], meter[1]))}</font></super>"
-                    if len(item["chords"]) > 1
+                    if len(item["chords"]) > 1 or event["beat"] > 0
                     else ""
                 )
                 for event in events
@@ -222,7 +222,8 @@ def render(project, paper="letter"):
             if part["ending"]:
                 detail = f"Play {part['name']} 1-{part['from_bar'] - 1}, then ending below"
             title = Paragraph(escape(label(part)) + f" <font size='9'> / {escape(detail)}</font>", heading)
-            items, offset, first = _items(part), 0, True
+            items, offset = _items(part), 0
+            part_rows = [[title]]
             previous_meter = (project.meter.numerator, project.meter.denominator)
             while offset < len(items):
                 row, widths = [], []
@@ -246,13 +247,26 @@ def render(project, paper="letter"):
                     widths.append(occupied)
                 slack = min(10, (usable - sum(widths)) / len(row))
                 row_flow = ChordRow(row, [w + slack for w in widths], size, previous_meter)
-                story.append(KeepTogether([title, row_flow]) if first else row_flow)
-                first = False
+                part_rows.append([row_flow])
                 for item in row:
                     if "reference" not in item:
                         previous_meter = (item["meter"]["numerator"], item["meter"]["denominator"])
                 offset += len(row)
-            story.append(Spacer(1, 2))
+            story.append(
+                Table(
+                    part_rows,
+                    colWidths=[usable],
+                    repeatRows=1,
+                    hAlign="LEFT",
+                    style=[
+                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                        ("TOPPADDING", (0, 0), (-1, -1), 0),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ],
+                )
+            )
+            story.append(Spacer(1, 8))
         if not story:
             story.append(Paragraph("No measures yet.", text))
         document.build(story)

@@ -1889,34 +1889,38 @@ summary span {
 .arrangement-bars {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px 0;
-  align-items: end;
+  gap: 0;
+  align-items: stretch;
 }
 .arrangement-bar {
   position: relative;
-  padding: 0 0 17px;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 4;
+  row-gap: 0;
+  padding-bottom: 10px;
   min-width: 0;
 }
-.arrangement-bar::before,
-.arrangement-bar::after {
+.bar-staff::before,
+.bar-staff::after {
   content: "";
   position: absolute;
   width: 1px;
   height: 21px;
   background: #111;
-  bottom: 22px;
+  bottom: 5px;
   left: 0;
 }
-.arrangement-bar::after {
+.bar-staff::after {
   left: auto;
   right: 0;
 }
-.arrangement-bar.repeat-begin::before,
-.arrangement-bar.repeat-finish::after {
+.arrangement-bar.repeat-begin .bar-staff::before,
+.arrangement-bar.repeat-finish .bar-staff::after {
   width: 3px;
   box-shadow: 4px 0 #111;
 }
-.arrangement-bar.repeat-finish::after {
+.arrangement-bar.repeat-finish .bar-staff::after {
   box-shadow: -4px 0 #111;
 }
 .arrangement-bar > small {
@@ -1938,12 +1942,27 @@ summary span {
 }
 .bar-harmony > span {
   display: inline-block;
+  white-space: nowrap;
 }
 .arrangement-bar strong {
   font:
     22px "Mulec Jazz",
     sans-serif;
+}
+.bar-staff {
+  position: relative;
+  align-self: end;
+}
+.bar-annotations {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-height: 17px;
+  padding: 2px 7px 0;
   overflow-wrap: anywhere;
+}
+.bar-annotations em {
+  flex: 1;
 }
 .rhythm-staff {
   display: block;
@@ -1960,9 +1979,8 @@ summary span {
   fill: #111;
 }
 .bar-meter {
-  position: absolute;
-  bottom: 2px;
-  right: 7px;
+  margin-left: auto;
+  flex-shrink: 0;
   font:
     9px "Mulec Jazz",
     sans-serif;
@@ -1984,9 +2002,6 @@ summary span {
     sans-serif;
   margin: 0;
 }
-.arrangement-bar > em:not(.pattern-repeat) {
-  margin: 4px 8px;
-}
 .arrangement-legend {
   font:
     12px "Mulec Jazz",
@@ -2003,13 +2018,13 @@ summary span {
 .arrangement.is-condensed .arrangement-bars {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px 0;
-  align-items: end;
+  gap: 0;
+  align-items: stretch;
 }
 .arrangement.is-condensed .arrangement-bar {
   min-width: 0;
   max-width: 100%;
-  padding: 0 0 17px;
+  padding-bottom: 10px;
 }
 .arrangement.is-condensed .bar-harmony {
   min-height: 30px;
@@ -2019,24 +2034,27 @@ summary span {
 .arrangement.is-condensed .bar-harmony strong {
   font-size: 22px;
 }
-.arrangement.is-condensed .arrangement-bar::before,
-.arrangement.is-condensed .arrangement-bar::after {
+.arrangement.is-condensed .bar-staff::before,
+.arrangement.is-condensed .bar-staff::after {
   top: auto;
-  bottom: 22px;
+  bottom: 5px;
   height: 21px;
 }
 .arrangement.is-condensed .rhythm-staff {
   display: block;
 }
 .arrangement.is-condensed .bar-meter {
-  position: absolute;
   display: block;
   padding-left: 0;
 }
 .arrangement.is-condensed .pattern-repeat {
   font-size: 9px;
 }
+.arrangement.is-condensed .arrangement-bar.is-dense {
+  grid-column: span 2;
+}
 .arrangement-reference {
+  grid-row: span 4;
   grid-column: 1 / -1;
   flex: 0 1 auto;
   max-width: 100%;

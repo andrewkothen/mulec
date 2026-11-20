@@ -156,3 +156,26 @@ def test_condensed_pdf_fits_rehearsal_length_in_two_pages_with_final_cue():
         doc = PdfReader(BytesIO(arrangement_pdf(p, paper, condensed=True)))
         assert len(doc.pages) <= 2
         assert "Final cue" in "".join(page.extract_text() for page in doc.pages)
+
+
+def test_condensed_pdf_repeats_section_heading_on_continuation_pages():
+    project = Project(
+        title="Long form",
+        measures=[
+            Measure(
+                start=i * 2,
+                end=i * 2 + 2,
+                section="Extended solo" if i == 0 else "",
+                chords=[Chord(symbol="G7", beat=1.5)],
+                cue=f"Rehearsal cue {i + 1}",
+            )
+            for i in range(180)
+        ],
+    )
+    for paper in ("letter", "a4"):
+        doc = PdfReader(BytesIO(arrangement_pdf(project, paper, condensed=True)))
+        assert len(doc.pages) > 1
+        assert all("Extended solo" in page.extract_text() for page in doc.pages)
+        text = "".join(page.extract_text() for page in doc.pages)
+        assert "Rehearsal cue 180" in text
+        assert "2&" in text  # A lone offbeat chord still carries its entrance.

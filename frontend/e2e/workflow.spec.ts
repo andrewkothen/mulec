@@ -482,3 +482,77 @@ test("compact arrangement merges returning parts and exports a bass-player chart
   );
   expect((await saved.json()).measures[16].section).toBe("Verse");
 });
+
+test("condensed bars align staves around cues and give dense harmony room", async ({
+  page,
+  request,
+}) => {
+  await request.post("/api/projects/import", {
+    data: {
+      title: "Readable arrangement",
+      measures: Array.from({ length: 8 }, (_, i) => ({
+        start: i * 2,
+        end: i * 2 + 2,
+        section: i === 0 ? "Verse" : "",
+        cue: i === 0 ? "Let the final chord ring before the next phrase" : "",
+        chords:
+          i === 1
+            ? [
+                { symbol: "Cmaj7", beat: 0 },
+                { symbol: "Dm7", beat: 1 },
+                { symbol: "G7b9", beat: 2 },
+                { symbol: "Cmaj7/E", beat: 3 },
+              ]
+            : [
+                {
+                  symbol: ["F", "C", "G", "Am", "Dm", "Em", "Bb", "D7"][i],
+                  beat: i === 2 ? 1.5 : 0,
+                },
+              ],
+      })),
+    },
+  });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: /Readable arrangement/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Form", exact: true }).click();
+  const toggle = page.getByRole("button", { name: "Condense", exact: true });
+  if ((await toggle.getAttribute("aria-pressed")) !== "true")
+    await toggle.click();
+  const chart = page.getByLabel("Compact arrangement", { exact: true });
+  await expect(chart.locator(".arrangement-bar")).toHaveCount(8);
+  await expect(
+    chart.locator(".arrangement-bar").nth(2).locator("sup"),
+  ).toHaveText("2&");
+  await page.evaluate(() => document.fonts.ready);
+  const boxes = await chart.locator(".rhythm-staff").evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const { x, y, width } = node.getBoundingClientRect();
+      return { x, y, width };
+    }),
+  );
+  expect(boxes[1].width).toBeGreaterThan(boxes[0].width * 1.8);
+  expect(Math.abs(boxes[0].y - boxes[1].y)).toBeLessThan(1);
+  expect(Math.abs(boxes[1].y - boxes[2].y)).toBeLessThan(1);
+  for (const width of [1440, 900, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 2,
+      ),
+    ).toBeTruthy();
+    expect(
+      await chart
+        .locator(".bar-harmony")
+        .evaluateAll((nodes) =>
+          nodes.every((node) => node.scrollWidth <= node.clientWidth + 1),
+        ),
+    ).toBeTruthy();
+    await page.screenshot({
+      path: `../tmp/refinement/browser-${width}.png`,
+      fullPage: true,
+    });
+  }
+});
