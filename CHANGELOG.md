@@ -1,5 +1,11 @@
 # Changelog
 
+## Public source preparation — 2026-11-20
+
+- Removed personal contact metadata and recording titles from published history and documentation.
+- Made restricted S-KEY weights a separate research installation and runtime opt-in.
+- Clarified local storage, source availability, third-party notices, and reserved reuse rights.
+
 ## Arrangement readability — 2026-11-20
 
 - Aligned neighboring staves even when chords wrap or a bar has a long rehearsal cue; barlines now stay attached to the staff.
@@ -60,9 +66,9 @@
 
 ## 0.1.0 — 2026-11-15
 
-- Renamed the product and intended private repository from Jazz Chart to **Mulec**; retained the full supplied specification.
+- Renamed the product and repository from Jazz Chart to **Mulec**; retained the full supplied specification.
 - Implemented the working local audio-to-chord-chart vertical slice with real DSP and confidence reporting.
 - Added browser playback, chart editing, revision-safe local persistence, undo/redo and print-ready exports.
 - Added original demo synthesis, MusicXML notation preview, experimental monophonic melody, instrument transposition, form view and MIDI export.
 - Added deterministic fixture tests, API persistence/export integration tests, browser acceptance coverage and GitHub Actions configuration.
-- Installed and built the application locally, verified the browser workflow, and connected the private `andrewkothen/mulec` repository. Work continues on `develop`, with tested milestones retained on `main`.
+- Installed and built the application locally, verified the browser workflow, and connected the `andrewkothen/mulec` repository. Work continues on `develop`, with tested milestones retained on `main`.

@@ -121,3 +121,24 @@ def test_silent_and_invalid_audio(tmp_path):
     path.write_text("not audio")
     with pytest.raises(ValueError, match="decoded"):
         decode(path, tmp_path / "out.wav")
+
+
+def test_research_key_model_requires_explicit_opt_in(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from backend.analysis import learned_harmony
+
+    python = tmp_path / "key" / learned_harmony.PYTHON
+    python.parent.mkdir(parents=True)
+    python.touch()
+    calls = []
+    monkeypatch.setattr(
+        learned_harmony.subprocess,
+        "run",
+        lambda *a, **k: calls.append(a) or SimpleNamespace(stdout='[{"key":"C"}]'),
+    )
+    monkeypatch.delenv("MULEC_ENABLE_RESEARCH_KEY_MODEL", raising=False)
+    assert learned_harmony.predict("key", tmp_path / "audio.wav", tmp_path) is None
+    assert calls == []
+    monkeypatch.setenv("MULEC_ENABLE_RESEARCH_KEY_MODEL", "1")
+    assert learned_harmony.predict("key", tmp_path / "audio.wav", tmp_path) == [{"key": "C"}]
+    assert len(calls) == 1

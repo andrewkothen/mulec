@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 def predict(model: str, wave: Path, model_dir: Path) -> list[dict] | None:
+    if model == "key" and os.environ.get("MULEC_ENABLE_RESEARCH_KEY_MODEL") != "1":
+        return None
     python = model_dir / model / PYTHON
     if not python.exists():
         return None

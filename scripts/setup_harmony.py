@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install the optional CPU harmony models once for offline use."""
 
+import argparse
 import os
 from pathlib import Path
 import shutil
@@ -23,16 +24,29 @@ MODELS = {
 }
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Install optional local harmony models.")
+    parser.add_argument(
+        "--research-key-model",
+        action="store_true",
+        help="Also install S-KEY weights, restricted to noncommercial research.",
+    )
+    args = parser.parse_args()
     uv = shutil.which("uv") or str(TOOLS / ("Scripts/uv.exe" if os.name == "nt" else "bin/uv"))
     python = ROOT / ".venv" / PYTHON
     if not Path(uv).is_file() or not python.exists():
         sys.exit("Run python3 scripts/setup.py first.")
     env = dict(os.environ, UV_CACHE_DIR=str(TOOLS / "cache"))
     for model, packages in MODELS.items():
+        if model == "key" and not args.research_key_model:
+            continue
         directory = TOOLS / "harmony" / model
         if not (directory / PYTHON).exists():
             subprocess.run([uv, "venv", "--python", str(python), str(directory)], env=env, check=True)
         subprocess.run(
             [uv, "pip", "install", "--python", str(directory / PYTHON), *packages], env=env, check=True
         )
-    print("Harmony models installed. New transcriptions will use them locally.")
+    print("Chord model installed. New transcriptions will use it locally.")
+    if args.research_key_model:
+        print(
+            "S-KEY weights are restricted to noncommercial research. Enable inference with MULEC_ENABLE_RESEARCH_KEY_MODEL=1."
+        )

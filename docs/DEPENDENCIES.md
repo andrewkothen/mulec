@@ -1,6 +1,6 @@
 # Runtime and licensing notes
 
-The repository remains private. No project-wide redistribution license has been selected on the owner's behalf. No recorded music, credentials or model weights are committed. The chart font is bundled with its OFL license; dependency executables are installed separately. `uv.lock` and `frontend/package-lock.json` record resolved versions; source builds use those lockfiles.
+The source repository is public for inspection. No project-wide reuse license has been granted; see COPYRIGHT.md. No recorded music, credentials or model weights are committed. The chart font is bundled with its OFL license; dependency executables are installed separately. `uv.lock` and `frontend/package-lock.json` record resolved versions; source builds use those lockfiles.
 
 | Component | Purpose | Upstream license / considerations |
 | --- | --- | --- |
@@ -34,3 +34,10 @@ Primary technical references:
 - [OpenSheetMusicDisplay](https://github.com/opensheetmusicdisplay/opensheetmusicdisplay)
 
 No accuracy claim is based only on the existence of these libraries. Verification and known limits are documented separately.
+
+## Optional harmony models
+
+LV-Chordia code is MIT-licensed at the pinned revision; its installation remains separate from this repository. S-KEY code is MIT-licensed, but its bundled model weights are restricted to noncommercial research. The default harmony setup installs only LV-Chordia. S-KEY installation requires `--research-key-model`, and inference requires `MULEC_ENABLE_RESEARCH_KEY_MODEL=1`, including for previously installed models. Neither model's weights are tracked in Mulec. These upstream terms are separate from the rights reserved for Mulec source.
+
+- [Pinned S-KEY terms](https://github.com/deezer/skey/blob/80d9590e150b836a341dfc6dbf05aa20bc81d10b/README.md#-license)
+- [Pinned LV-Chordia license](https://github.com/openmirlab/lv-chordia/blob/d8ab9ac99bce081bb79065d717f96e2c3b2099c8/LICENSE)

@@ -1,8 +1,8 @@
 # Mulec
 
-**From recording to rehearsal.** Mulec is a private, local-first browser application that turns an audio recording into an editable chord chart. It runs real signal analysis on your computer, saves projects locally, and exports printable PDF, MusicXML, MIDI melody and project JSON.
+**From recording to rehearsal.** Mulec is a local-first browser application that turns an audio recording into an editable chord chart. It runs real signal analysis on your computer, saves projects locally, and exports printable PDF, MusicXML, MIDI melody and project JSON.
 
-The application and intended private repository are named **Mulec / `mulec`**. The original supplied specification is preserved at [`docs/JAZZ_CHART_PROJECT_SPEC.md`](docs/JAZZ_CHART_PROJECT_SPEC.md); the user's subsequent naming decision overrides “Jazz Chart” and `jazz-chart` throughout that document.
+The application and repository are named **Mulec / `mulec`**. The original supplied specification is preserved at [`docs/JAZZ_CHART_PROJECT_SPEC.md`](docs/JAZZ_CHART_PROJECT_SPEC.md); the user's subsequent naming decision overrides “Jazz Chart” and `jazz-chart` throughout that document.
 
 ## Run on this computer
 
@@ -52,7 +52,9 @@ The import queue uploads and analyzes one song at a time, shows per-song progres
 
 Enable **Condense** in Form's Arrangement view for shorter musical measures: staff lines, rhythm slashes and chord lettering remain, with up to six bars per row where space permits. Dense measures have room for their changes. Exact repeats, changed endings, meter, beat cues, manual changes and uncertainty remain represented. The PDF follows the toggle and aims for fewer pages with a 12-point chord-text floor; long/dense charts can need more than two pages to remain readable. The preference survives reloads, and the underlying chart and recording timeline remain unchanged.
 
-For stronger harmony analysis, run `python3 scripts/setup_harmony.py` after the regular setup. This installs [S-KEY](https://github.com/deezer/skey) for key estimation and [LV-Chordia](https://github.com/openmirlab/lv-chordia) for chord changes in separate local CPU environments. Deezer licenses the S-KEY weights for noncommercial research only. The download happens once. New imports use the models automatically and fall back to pitch profiles or chord templates if a model is unavailable. **Analysis notes** names the method used. Close key alternatives appear beside the estimated key.
+For optional local chord recognition, run `python3 scripts/setup_harmony.py` after the regular setup. This installs [LV-Chordia](https://github.com/openmirlab/lv-chordia) in a separate CPU environment. New imports use it automatically and fall back to chord templates if unavailable. **Analysis notes** names the method used.
+
+S-KEY is a separate **noncommercial research-only** option: its model weights are not MIT-licensed. Install it with `python3 scripts/setup_harmony.py --research-key-model`, then explicitly enable it with `MULEC_ENABLE_RESEARCH_KEY_MODEL=1 python3 scripts/start.py`. This also applies to existing S-KEY installations. Normal use estimates keys with pitch profiles or your known-key override. See [dependency licensing notes](docs/DEPENDENCIES.md).
 
 If you know the song's key, choose **Analysis options → Known key** before importing. This overrides automatic key detection. Changing the signature under **Song & beat grid** applies to the notation. Theoretical signatures such as Db minor are respelled to their practical equivalent during notation export. Unresolved chord events appear as `?` in Chord chart and are omitted from the engraved staff and MusicXML.
 
@@ -73,7 +75,7 @@ If you know the song's key, choose **Analysis options → Known key** before imp
 
 `data/mulec.sqlite3` holds project snapshots and analysis jobs; `data/audio/` holds normalized WAV playback files. Uploaded originals are removed after decoding/analysis. Set `MULEC_DATA_DIR` to choose another storage directory. The app binds to `127.0.0.1`, checks Host/Origin headers, accepts no remote audio URLs, and bounds upload size, decoded duration and analysis queue length.
 
-Audio, databases, models, generated files, virtual environments and secrets are excluded from Git. The repository is intended to remain **private**. No deployment or publishing workflow exists.
+Audio, databases, models, generated files, virtual environments and secrets are excluded from Git. The source repository is public; recordings and saved projects stay on your computer. No hosted deployment is provided.
 
 ## Development and verification
 
@@ -100,9 +102,9 @@ For live frontend development, start the backend with `.venv/bin/python -m uvico
 
 See [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md), [CHANGELOG.md](CHANGELOG.md), [licensing notes](docs/DEPENDENCIES.md) and [verification evidence](docs/VERIFICATION.md).
 
-## Private GitHub connection
+## Source and reuse
 
-The private repository is [andrewkothen/mulec](https://github.com/andrewkothen/mulec). This workspace is linked to it through the `origin` remote.
+The repository is [andrewkothen/mulec](https://github.com/andrewkothen/mulec). This workspace is linked to it through the `origin` remote.
 
 After committing changes, upload the current branch with:
 
@@ -110,4 +112,6 @@ After committing changes, upload the current branch with:
 git push
 ```
 
-Keep the repository private. Recordings, local databases, secrets, dependencies and generated files are excluded by `.gitignore`. The roadmap lists future issue candidates.
+Recordings, local databases, secrets, dependencies and generated files are excluded by `.gitignore`. The roadmap lists future issue candidates.
+
+Mulec source is published for inspection. No project-wide reuse license has been granted; see [COPYRIGHT.md](COPYRIGHT.md). Third-party components retain their own licenses.

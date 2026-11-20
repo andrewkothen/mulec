@@ -30,7 +30,7 @@ The reference PDF was inspected visually and its embedded font names identified 
 
 Compact PDFs render rhythm staves/slashes, repeat barlines and total-pass counts, short jazz chord symbols, and explicit changed-ending directions. Redundant inferred chord carries are hidden; manual events and unresolved harmony remain visible. A page-fit pass targets two, three or four pages according to written length, with a 12-point chord-text lower bound and wrapping for dense changes. Exceptionally long scores can exceed the target without losing music.
 
-The actual local representative chart arrangement renders on 2 pages and the longest chart on 4 pages. All pages were rendered and inspected for spacing and glyphs. Engineering coverage checks shorthand quality/slash bass, offbeat and compound-meter beat labels, retained manual changes, an end cue on a rehearsal-length PDF, embedded font resources, browser font loading and visible rhythm rows. This validates printing behavior, not harmonic accuracy.
+The actual local representative arrangement renders on 2 pages and the longest chart on 4 pages. All pages were rendered and inspected for spacing and glyphs. Engineering coverage checks shorthand quality/slash bass, offbeat and compound-meter beat labels, retained manual changes, an end cue on a rehearsal-length PDF, embedded font resources, browser font loading and visible rhythm rows. This validates printing behavior, not harmonic accuracy.
 
 Latest local checks passed: 80 Python tests, 2 TypeScript tests, Ruff, production frontend build/type checking, and all 3 browser acceptance scenarios.
 
@@ -38,7 +38,7 @@ Latest local checks passed: 80 Python tests, 2 TypeScript tests, Ruff, productio
 
 Local checks passed: 78 Python tests, 2 TypeScript transformation tests, Ruff, TypeScript type checking, production frontend build, and all 3 browser acceptance scenarios. The new browser scenario merges a returning F occurrence into A, renames the shared group, saves and reloads it, and downloads a compact PDF. Unit coverage retains changed endings, meter and melody differences, and distinguishes reversed harmonic contours from a returning phrase.
 
-The local representative chart chart was regrouped and saved with a backup of its previous section labels. Its 107 performed bars compress to 52 written bars across two visually inspected PDF pages. This is evidence of the arrangement workflow, not a musical accuracy benchmark. Automatic grouping remains a suggestion; semantic Verse/Chorus/etc. names are assigned by the user.
+The local representative chart was regrouped and saved with a backup of its previous section labels. Its 107 performed bars compress to 52 written bars across two visually inspected PDF pages. This is evidence of the arrangement workflow, not a musical accuracy benchmark. Automatic grouping remains a suggestion; semantic Verse/Chorus/etc. names are assigned by the user.
 
 ## Key-signature regression fix (2026-11-16)
 
@@ -80,4 +80,4 @@ Inspect generated `tmp/library.png`, `tmp/workspace.png`, `tmp/lead-sheet.png`, 
 - Add melody and export PDF: the PDF intentionally remains a chord chart. Export MusicXML to carry melody notation.
 - Import project JSON: notation survives but playback is unavailable because audio was not bundled.
 
-Local checks passed: 28 Python tests, 2 TypeScript transformation tests, Ruff lint, TypeScript type checking, a production frontend build and one browser acceptance scenario. This includes extracting a 440 Hz monophonic melody from synthesized audio. The private repository is connected; GitHub Actions results must be checked separately from these local results.
+Local checks passed: 28 Python tests, 2 TypeScript transformation tests, Ruff lint, TypeScript type checking, a production frontend build and one browser acceptance scenario. This includes extracting a 440 Hz monophonic melody from synthesized audio. The repository is connected; GitHub Actions results must be checked separately from these local results.

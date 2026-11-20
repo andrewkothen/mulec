@@ -1,3 +1,7 @@
+# Historical specification
+
+This is the original project brief. The owner subsequently renamed the application Mulec and authorized public source publication. Those later decisions supersede the private-repository requirements below. User recordings and project data remain local and excluded from Git.
+
 # Project: Jazz Chart — Local-First Audio-to-Jazz-Notation Application
 
 You are a senior software architect, audio DSP engineer, music-information-retrieval specialist, and full-stack developer.
